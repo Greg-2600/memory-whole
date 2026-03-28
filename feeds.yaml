@@ -1,0 +1,76 @@
+feeds:
+  # ── Broadcast / Wire ──────────────────────────────────────
+  - name: CNN Top Stories
+    url: https://rss.cnn.com/rss/edition.rss
+  - name: MSNBC Top Stories
+    url: https://www.msnbc.com/feeds/rss.xml
+  - name: FOX News Latest
+    url: https://moxie.foxnews.com/google-publisher/latest.xml
+  - name: ABC News
+    url: https://abcnews.go.com/abcnews/topstories
+  - name: CBS News
+    url: https://www.cbsnews.com/latest/rss/main
+  - name: PBS NewsHour
+    url: https://www.pbs.org/newshour/feeds/rss/headlines
+  - name: NPR News
+    url: https://feeds.npr.org/1001/rss.xml
+  - name: AP News
+    url: https://feedx.net/rss/ap.xml
+
+  # ── Major papers ────────────────────────────────────────
+  - name: NY Times
+    url: https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml
+  - name: Washington Post
+    url: https://feeds.washingtonpost.com/rss/national
+  - name: NY Post
+    url: https://nypost.com/feed/
+
+  # ── Center / Political ──────────────────────────────────
+  - name: The Hill
+    url: https://thehill.com/feed/
+  - name: RealClearPolitics
+    url: https://www.realclearpolitics.com/index.xml
+  - name: CNBC Top News
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114
+
+  # ── Right-leaning ───────────────────────────────────────
+  - name: Breitbart
+    url: https://feeds.feedburner.com/breitbart
+  - name: Daily Wire
+    url: https://www.dailywire.com/feeds/rss.xml
+  - name: The Federalist
+    url: https://thefederalist.com/feed/
+  - name: Drudge Report
+    url: https://www.drudgereport.com/rss.xml
+  - name: Rantingly
+    url: https://rantingly.com/feed
+  - name: Patriots.win (forum)
+    url: https://patriots.win/feed
+
+  # ── Left-leaning ────────────────────────────────────────
+  - name: The Intercept
+    url: https://theintercept.com/feed/?rss
+  - name: Democracy Now
+    url: https://www.democracynow.org/democracynow.rss
+
+  # ── International ───────────────────────────────────────
+  - name: BBC (US & Canada)
+    url: https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml
+  - name: The Guardian US
+    url: https://www.theguardian.com/us-news/rss
+  - name: Al Jazeera
+    url: https://www.aljazeera.com/xml/rss/all.xml
+
+  # ── Aggregators ─────────────────────────────────────────
+  - name: Google News (US)
+    url: https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en
+
+settings:
+  output_dir: output
+  max_items_per_feed: 250
+  merge_all_sources: true
+  merged_filename: daily-news-{date}.md
+  daily_title: Daily RSS Digest - {date}
+  write_individual_feeds: false
+  summary_max_sentences: 6
+  summary_max_words: 300

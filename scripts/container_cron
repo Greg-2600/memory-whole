@@ -1,0 +1,4 @@
+CRON_TZ=UTC
+PATH=/usr/local/bin:/usr/bin:/bin
+# Run the full pipeline every 6 hours: fetch → track → dashboard
+0 */6 * * * root cd /app && /usr/local/bin/python3 rss_reader.py --max-items 250 >> /app/logs/cron.log 2>&1

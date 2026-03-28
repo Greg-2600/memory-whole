@@ -1,0 +1,28 @@
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 88
+select = [
+  "E",
+  "F",
+  "I",
+  "W",
+  "C",
+]
+extend-ignore = [
+  "E203",
+  "W503",
+]
+exclude = [
+  "output",
+  "venv",
+  ".venv",
+  "build",
+  "dist",
+]
+
+[tool.isort]
+profile = "black"
+line_length = 88

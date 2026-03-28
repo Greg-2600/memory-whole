@@ -1,0 +1,139 @@
+"""Story tracking: cluster headlines and manage story lifecycle.
+
+Each run re-clusters recent headlines using TF-IDF + DBSCAN, maps clusters
+to existing stories (or creates new ones), and updates daily snapshots so
+we can detect rising and disappearing stories.
+"""
+
+from __future__ import annotations
+
+import sqlite3
+from typing import Any
+
+import db
+from utils import slugify
+
+try:
+    from sklearn.cluster import DBSCAN
+    from sklearn.decomposition import TruncatedSVD
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
+    _HAS_SKLEARN = True
+except ImportError:
+    _HAS_SKLEARN = False
+
+
+def track_stories(
+    conn: sqlite3.Connection,
+    cluster_days: int = 14,
+) -> None:
+    """Main tracking routine: cluster → match → refresh → snapshot."""
+    headlines = db.get_recent_headlines(conn, days=cluster_days)
+    if len(headlines) < 2:
+        # Not enough data to cluster — assign singletons as own stories
+        for h in headlines:
+            if not db.get_story_for_headline(conn, h["id"]):
+                sid = db.create_story(
+                    conn,
+                    slug=slugify(h["title"])[:60],
+                    title=h["title"],
+                    first_seen=h["first_seen"],
+                    last_seen=h["last_seen"],
+                )
+                db.assign_headline_to_story(conn, h["id"], sid)
+        conn.commit()
+        return
+
+    clusters = _cluster_headlines(headlines)
+
+    for cluster_items in clusters:
+        hids = [h["id"] for h in cluster_items]
+
+        # Which stories do these headlines already belong to?
+        existing: set[int] = set()
+        for hid in hids:
+            sid = db.get_story_for_headline(conn, hid)
+            if sid:
+                existing.add(sid)
+
+        if not existing:
+            # Brand-new story
+            rep = max(cluster_items, key=lambda h: len(h["title"]))
+            first = min(h["first_seen"] for h in cluster_items)
+            last = max(h["last_seen"] for h in cluster_items)
+            story_id = db.create_story(
+                conn,
+                slug=slugify(rep["title"])[:60],
+                title=rep["title"],
+                first_seen=first,
+                last_seen=last,
+            )
+        elif len(existing) == 1:
+            story_id = existing.pop()
+        else:
+            # Multiple existing stories belong to same cluster → merge
+            story_id = db.merge_stories(conn, list(existing))
+
+        for hid in hids:
+            db.assign_headline_to_story(conn, hid, story_id)
+
+    # Refresh metadata for every story
+    for row in conn.execute("SELECT id FROM stories").fetchall():
+        db.refresh_story(conn, row["id"])
+
+    db.update_daily_snapshots(conn)
+    db.update_statuses(conn)
+    conn.commit()
+
+
+# ------------------------------------------------------------------
+# Clustering
+# ------------------------------------------------------------------
+
+
+def _cluster_headlines(
+    headlines: list[Any],
+) -> list[list[Any]]:
+    """Cluster headlines by text similarity.
+
+    Returns a list of clusters (each a list of headline rows).
+    Noise items (singletons) are each returned as their own 1-element cluster
+    so every headline ends up in a story.
+    """
+    if not _HAS_SKLEARN:
+        raise RuntimeError(
+            "scikit-learn is required for story tracking "
+            "(pip install scikit-learn numpy)"
+        )
+
+    docs: list[str] = []
+    for h in headlines:
+        text = (h["title"] or "") + " " + (h["summary"] or "")
+        docs.append(text)
+
+    vec = TfidfVectorizer(max_features=2000, stop_words="english")
+    X = vec.fit_transform(docs)
+
+    # Optional SVD for dimensionality reduction
+    n_comp = min(100, max(1, X.shape[1] - 1), max(1, X.shape[0] - 1))
+    if n_comp > 1:
+        try:
+            svd = TruncatedSVD(n_components=n_comp)
+            Xr = svd.fit_transform(X)
+        except Exception:
+            Xr = X.toarray()
+    else:
+        Xr = X.toarray()
+
+    scanner = DBSCAN(eps=0.45, min_samples=2, metric="cosine")
+    labels = scanner.fit_predict(Xr)
+
+    buckets: dict[int, list[Any]] = {}
+    noise: list[list[Any]] = []
+    for i, lbl in enumerate(labels):
+        if lbl == -1:
+            noise.append([headlines[i]])
+        else:
+            buckets.setdefault(int(lbl), []).append(headlines[i])
+
+    return list(buckets.values()) + noise

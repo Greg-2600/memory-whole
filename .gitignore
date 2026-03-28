@@ -1,0 +1,28 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Editor directories
+.vscode/
+.idea/
+
+# Test and coverage
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Output
+output/
+
+# macOS
+.DS_Store
+.tmp_test_output/
+.tmp_test_output/

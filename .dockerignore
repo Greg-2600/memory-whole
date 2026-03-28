@@ -1,0 +1,9 @@
+# Ignore virtualenv, git, and Python cache
+.venv
+__pycache__
+*.pyc
+*.pyo
+.git
+output/
+logs/
+.env

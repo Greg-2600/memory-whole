@@ -77,7 +77,7 @@ def generate(
     all_sources = sorted(source_matrix.keys())
 
     # Top stories for matrix (limit to top 20)
-    matrix_stories = [s for s in all_stories if s["source_count"] > 1][:20]
+    matrix_stories = sorted(all_stories, key=lambda s: s["importance_score"], reverse=True)[:20]
 
     # Preload per-story source names for top stories (used by hero/grid cards)
     story_sources: dict[int, list[str]] = {}

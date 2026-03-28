@@ -2,44 +2,36 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.11, 3.12]
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then python -m pip install -r requirements-dev.txt; fi
+          python -m pip install -r requirements-dev.txt
 
       - name: Format check (black)
-        run: |
-          python -m black --check .
+        run: python -m black --check .
 
       - name: Lint (ruff)
-        run: |
-          python -m ruff check .
+        run: python -m ruff check .
 
-      - name: Lint (pylint)
-        run: |
-          python -m pylint rss_reader.py tests --score=y
-
-      - name: Run unit tests
-        run: |
-          python -m unittest discover -s tests -v
+      - name: Run tests
+        run: python -m pytest tests/ -v

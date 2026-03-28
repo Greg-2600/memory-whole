@@ -1,8 +1,12 @@
 import unittest
 from pathlib import Path
-import datetime as dt
 
-from rss_reader import load_entries_from_markdown, detect_important_clusters, write_calendar_html, TfidfVectorizer
+from rss_reader import (
+    TfidfVectorizer,
+    detect_important_clusters,
+    load_entries_from_markdown,
+    write_calendar_html,
+)
 
 
 @unittest.skipIf(TfidfVectorizer is None, "scikit-learn not installed")

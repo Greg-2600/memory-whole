@@ -6,10 +6,12 @@ import unittest
 from pathlib import Path
 
 from rss_reader import (
-    first_non_empty,
-    item_datetime,
     load_config,
     markdown_for_feed,
+)
+from utils import (
+    first_non_empty,
+    item_datetime,
     slugify,
     strip_html,
     summarize_text,
@@ -22,7 +24,7 @@ class TestHelpers(unittest.TestCase):
     def test_slugify_basic(self) -> None:
         """Slugify converts strings to safe slugs."""
         self.assertEqual(slugify("  Reuters World  "), "reuters-world")
-        self.assertEqual(slugify("***"), "feed")
+        self.assertEqual(slugify("***"), "item")
 
     def test_first_non_empty(self) -> None:
         """first_non_empty returns the first meaningful string."""
@@ -145,6 +147,64 @@ class TestMarkdown(unittest.TestCase):
         """markdown_for_feed returns a friendly message when no items exist."""
         output = markdown_for_feed("Empty Feed", "https://example.com/rss", [])
         self.assertIn("No items found.", output)
+
+
+class TestJsonExport(unittest.TestCase):
+    """Tests for the JSON API export."""
+
+    def test_write_json_export(self) -> None:
+        import json
+        import sqlite3
+
+        import db as db_mod
+        from rss_reader import _write_json_export
+
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        db_mod.init_db(conn)
+
+        # Seed a headline and story
+        db_mod.upsert_headline(
+            conn,
+            url="http://example.com/1",
+            title="Test Story",
+            source="Source A",
+            published_at="2026-03-27",
+            first_seen="2026-03-27",
+            last_seen="2026-03-27",
+            summary="Test summary.",
+        )
+        sid = db_mod.create_story(
+            conn,
+            slug="test-story",
+            title="Test Story",
+            first_seen="2026-03-27",
+            last_seen="2026-03-27",
+        )
+        hid = conn.execute("SELECT id FROM headlines").fetchone()["id"]
+        db_mod.assign_headline_to_story(conn, hid, sid)
+        db_mod.refresh_story(conn, sid)
+        db_mod.update_daily_snapshots(conn)
+        conn.execute("UPDATE stories SET status = 'active' WHERE id = ?", (sid,))
+        conn.commit()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outdir = Path(tmpdir)
+            _write_json_export(conn, outdir, {})
+
+            api_file = outdir / "api.json"
+            self.assertTrue(api_file.exists(), "api.json should be generated")
+
+            data = json.loads(api_file.read_text(encoding="utf-8"))
+            self.assertIn("generated_at", data)
+            self.assertIn("top_stories", data)
+            self.assertIn("disappeared_stories", data)
+            self.assertEqual(data["headline_count"], 1)
+            self.assertEqual(data["story_count"], 1)
+            self.assertEqual(len(data["top_stories"]), 1)
+            self.assertEqual(data["top_stories"][0]["title"], "Test Story")
+
+        conn.close()
 
 
 if __name__ == "__main__":

@@ -1,17 +1,15 @@
-version: '3.8'
-
 services:
-  memory_mountain:
+  memory_whole:
     build: .
     ports:
       - "4747:4747"
     volumes:
-      - mm_output:/app/output
+      - mw_output:/app/output
     restart: unless-stopped
     environment:
       - PORT=4747
       - FORCE_REGEN=0
 
 volumes:
-  mm_output:
-    name: mm_output
+  mw_output:
+    name: mw_output

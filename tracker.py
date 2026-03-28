@@ -3,15 +3,21 @@
 Each run re-clusters recent headlines using TF-IDF + DBSCAN, maps clusters
 to existing stories (or creates new ones), and updates daily snapshots so
 we can detect rising and disappearing stories.
+
+Also tracks merge/split events when stories converge or diverge between runs.
 """
 
 from __future__ import annotations
 
+import logging
 import sqlite3
+from dataclasses import dataclass, field
 from typing import Any
 
 import db
 from utils import slugify
+
+log = logging.getLogger(__name__)
 
 try:
     from sklearn.cluster import DBSCAN
@@ -23,11 +29,26 @@ except ImportError:
     _HAS_SKLEARN = False
 
 
+@dataclass
+class StoryEvent:
+    """A merge or split event detected during tracking."""
+
+    event_type: str  # "merge" or "split"
+    survivor_id: int
+    survivor_title: str
+    absorbed_ids: list[int] = field(default_factory=list)
+    absorbed_titles: list[str] = field(default_factory=list)
+
+
 def track_stories(
     conn: sqlite3.Connection,
     cluster_days: int = 14,
-) -> None:
-    """Main tracking routine: cluster → match → refresh → snapshot."""
+) -> list[StoryEvent]:
+    """Main tracking routine: cluster → match → refresh → snapshot.
+
+    Returns a list of merge/split events detected during this run.
+    """
+    events: list[StoryEvent] = []
     headlines = db.get_recent_headlines(conn, days=cluster_days)
     if len(headlines) < 2:
         # Not enough data to cluster — assign singletons as own stories
@@ -42,7 +63,7 @@ def track_stories(
                 )
                 db.assign_headline_to_story(conn, h["id"], sid)
         conn.commit()
-        return
+        return events
 
     clusters = _cluster_headlines(headlines)
 
@@ -72,6 +93,45 @@ def track_stories(
             story_id = existing.pop()
         else:
             # Multiple existing stories belong to same cluster → merge
+            # Record the merge event before it happens
+            sorted_ids = sorted(existing)
+            survivor = sorted_ids[0]
+            absorbed = sorted_ids[1:]
+
+            # Look up titles for the absorbed stories
+            absorbed_titles = []
+            for aid in absorbed:
+                row = conn.execute(
+                    "SELECT representative_title FROM stories WHERE id = ?",
+                    (aid,),
+                ).fetchone()
+                if row:
+                    absorbed_titles.append(row["representative_title"])
+
+            survivor_row = conn.execute(
+                "SELECT representative_title FROM stories WHERE id = ?",
+                (survivor,),
+            ).fetchone()
+            survivor_title = (
+                survivor_row["representative_title"] if survivor_row else "Story"
+            )
+
+            events.append(
+                StoryEvent(
+                    event_type="merge",
+                    survivor_id=survivor,
+                    survivor_title=survivor_title,
+                    absorbed_ids=absorbed,
+                    absorbed_titles=absorbed_titles,
+                )
+            )
+            log.info(
+                "Merging stories %s into %d (%s)",
+                absorbed,
+                survivor,
+                survivor_title,
+            )
+
             story_id = db.merge_stories(conn, list(existing))
 
         for hid in hids:
@@ -84,6 +144,7 @@ def track_stories(
     db.update_daily_snapshots(conn)
     db.update_statuses(conn)
     conn.commit()
+    return events
 
 
 # ------------------------------------------------------------------

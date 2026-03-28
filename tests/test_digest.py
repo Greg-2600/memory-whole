@@ -65,7 +65,7 @@ class TestBuildDigestText:
     def test_empty_db(self):
         conn = _setup_db()
         text = _build_digest_text(conn, {})
-        assert "Memory Mountain" in text
+        assert "Memory Whole" in text
         assert "Digest" in text
 
     def test_includes_top_stories(self):
@@ -146,7 +146,7 @@ class TestRunDigest:
         files = list(tmp_path.glob("digest-*.txt"))
         assert len(files) == 1
         content = files[0].read_text()
-        assert "Memory Mountain" in content
+        assert "Memory Whole" in content
 
     @patch("digest.send_ntfy", return_value=True)
     def test_sends_ntfy(self, mock_ntfy, tmp_path):

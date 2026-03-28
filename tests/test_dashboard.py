@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import db
 import dashboard
+import db
 
 
 def _make_conn() -> sqlite3.Connection:
@@ -22,8 +22,18 @@ def _seed_data(conn: sqlite3.Connection) -> None:
         [
             ("http://a.com/1", "Big earthquake hits coast", "CNN", "2026-03-26"),
             ("http://b.com/1", "Major earthquake on the coast", "BBC", "2026-03-26"),
-            ("http://c.com/1", "Earthquake devastates coastal towns", "NPR", "2026-03-27"),
-            ("http://d.com/1", "Stock market rallies on earnings", "CNBC", "2026-03-27"),
+            (
+                "http://c.com/1",
+                "Earthquake devastates coastal towns",
+                "NPR",
+                "2026-03-27",
+            ),
+            (
+                "http://d.com/1",
+                "Stock market rallies on earnings",
+                "CNBC",
+                "2026-03-27",
+            ),
             ("http://e.com/1", "Tech earnings drive market surge", "Fox", "2026-03-27"),
         ]
     ):
@@ -68,12 +78,8 @@ def _seed_data(conn: sqlite3.Connection) -> None:
     db.update_daily_snapshots(conn, today="2026-03-27")
 
     # Set statuses
-    conn.execute(
-        "UPDATE stories SET status = 'active' WHERE id = ?", (s1,)
-    )
-    conn.execute(
-        "UPDATE stories SET status = 'active' WHERE id = ?", (s2,)
-    )
+    conn.execute("UPDATE stories SET status = 'active' WHERE id = ?", (s1,))
+    conn.execute("UPDATE stories SET status = 'active' WHERE id = ?", (s2,))
     conn.commit()
 
 
@@ -92,7 +98,7 @@ class TestDashboardGenerate(unittest.TestCase):
             self.assertTrue(index.exists(), "index.html should be generated")
 
             content = index.read_text(encoding="utf-8")
-            self.assertIn("Memory Mountain", content)
+            self.assertIn("Memory Whole", content)
             self.assertIn("Top Stories", content)
             self.assertIn("Disappeared", content)
 
@@ -130,6 +136,95 @@ class TestDashboardGenerate(unittest.TestCase):
             self.assertTrue(index.exists())
 
         conn.close()
+
+    def test_dashboard_has_all_seven_tabs(self) -> None:
+        conn = _make_conn()
+        _seed_data(conn)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outdir = Path(tmpdir)
+            dashboard.generate(conn, outdir)
+
+            content = (outdir / "index.html").read_text(encoding="utf-8")
+            for tab in [
+                "Top Stories",
+                "Disappeared",
+                "Silence",
+                "Framing",
+                "Timeline",
+                "Sources",
+                "Feeds",
+            ]:
+                self.assertIn(tab, content, f"Tab '{tab}' missing from dashboard")
+
+        conn.close()
+
+    def test_dashboard_has_dark_mode_toggle(self) -> None:
+        conn = _make_conn()
+        _seed_data(conn)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outdir = Path(tmpdir)
+            dashboard.generate(conn, outdir)
+
+            content = (outdir / "index.html").read_text(encoding="utf-8")
+            self.assertIn("themeToggle", content)
+            self.assertIn("mw-theme", content)
+            self.assertIn("dark-mode", content)
+
+        conn.close()
+
+    def test_dashboard_has_mobile_responsive_css(self) -> None:
+        conn = _make_conn()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outdir = Path(tmpdir)
+            dashboard.generate(conn, outdir)
+
+            content = (outdir / "index.html").read_text(encoding="utf-8")
+            self.assertIn("max-width:768px", content)
+            self.assertIn("max-width:480px", content)
+
+        conn.close()
+
+    def test_dashboard_accepts_feed_health(self) -> None:
+        from fetcher import FeedHealth
+
+        conn = _make_conn()
+        _seed_data(conn)
+
+        health = [
+            FeedHealth(name="CNN", url="https://cnn.com/rss", ok=True, items_fetched=5),
+            FeedHealth(
+                name="Bad Feed",
+                url="https://bad.com/rss",
+                ok=False,
+                error="Timeout",
+            ),
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outdir = Path(tmpdir)
+            dashboard.generate(conn, outdir, feed_health=health)
+
+            content = (outdir / "index.html").read_text(encoding="utf-8")
+            self.assertIn("Feed Health", content)
+            self.assertIn("CNN", content)
+            self.assertIn("Bad Feed", content)
+
+        conn.close()
+
+    def test_velocity_badge_function(self) -> None:
+        # Test the velocity badge HTML helper directly
+        badge = dashboard._velocity_badge("rising")
+        self.assertIn("rising", badge)
+        self.assertIn("vel-badge", badge)
+
+        badge_empty = dashboard._velocity_badge("")
+        self.assertEqual(badge_empty, "")
+
+        badge_steady = dashboard._velocity_badge("steady")
+        self.assertEqual(badge_steady, "")
 
 
 if __name__ == "__main__":

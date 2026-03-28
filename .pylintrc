@@ -1,9 +1,0 @@
-[MASTER]
-# Maximum number of characters on a single line.
-max-line-length=88
-
-[MESSAGES CONTROL]
-# Keep all default checks enabled; project includes docstrings.
-
-[FORMAT]
-max-line-length=88

@@ -1,4 +1,4 @@
-"""SQLite database layer for Memory Mountain.
+"""SQLite database layer for Memory Whole.
 
 Stores every headline ever fetched, groups them into *stories* that persist
 across days, and records daily snapshots so coverage can be tracked over time.
@@ -98,6 +98,7 @@ def upsert_headline(
            VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(url) DO UPDATE SET
                last_seen = MAX(headlines.last_seen, excluded.last_seen),
+               first_seen = MIN(headlines.first_seen, excluded.first_seen),
                title = CASE WHEN length(excluded.title) > length(headlines.title)
                             THEN excluded.title ELSE headlines.title END
         """,
@@ -198,7 +199,7 @@ def merge_stories(conn: sqlite3.Connection, story_ids: list[int]) -> int:
 def refresh_story(conn: sqlite3.Connection, story_id: int) -> None:
     """Recalculate metadata for a single story from its headlines."""
     rows = conn.execute(
-        """SELECT title, source, first_seen, last_seen
+        """SELECT title, source, published_at, first_seen, last_seen
            FROM headlines WHERE story_id = ?""",
         (story_id,),
     ).fetchall()
@@ -209,7 +210,9 @@ def refresh_story(conn: sqlite3.Connection, story_id: int) -> None:
 
     sources = {r["source"] for r in rows}
     first = min(r["first_seen"] for r in rows)
-    last = max(r["last_seen"] for r in rows)
+    # Use published_at as canonical last_seen so old stories don't appear
+    # active just because they were re-fetched today.
+    last = max(r["published_at"] or r["last_seen"] for r in rows)
     rep_title = max(rows, key=lambda r: len(r["title"]))["title"]
     mentions = len(rows)
     source_count = len(sources)
@@ -308,7 +311,8 @@ def backfill_daily_snapshots(conn: sqlite3.Connection) -> int:
         )
         count += 1
 
-    # Update peak info for all stories
+    # Update peak info and recalculate first_seen / last_seen for all stories
+    # so that old stories aren't all marked active after a bulk re-fetch.
     for s in conn.execute("SELECT id FROM stories").fetchall():
         peak = conn.execute(
             """SELECT date, source_count FROM daily_snapshots
@@ -316,10 +320,25 @@ def backfill_daily_snapshots(conn: sqlite3.Connection) -> int:
                ORDER BY source_count DESC, date DESC LIMIT 1""",
             (s["id"],),
         ).fetchone()
+        dates = conn.execute(
+            """SELECT MIN(COALESCE(h.published_at, h.first_seen)) AS fs,
+                      MAX(COALESCE(h.published_at, h.first_seen)) AS ls
+               FROM headlines h WHERE h.story_id = ?""",
+            (s["id"],),
+        ).fetchone()
+        updates: dict[str, Any] = {}
         if peak:
+            updates["peak_date"] = peak["date"]
+            updates["peak_source_count"] = peak["source_count"]
+        if dates and dates["fs"]:
+            updates["first_seen"] = dates["fs"]
+        if dates and dates["ls"]:
+            updates["last_seen"] = dates["ls"]
+        if updates:
+            sets = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(
-                "UPDATE stories SET peak_date = ?, peak_source_count = ? WHERE id = ?",
-                (peak["date"], peak["source_count"], s["id"]),
+                f"UPDATE stories SET {sets} WHERE id = ?",
+                (*updates.values(), s["id"]),
             )
 
     conn.commit()
@@ -373,7 +392,7 @@ def get_top_stories(conn: sqlite3.Connection, limit: int = 30) -> list[sqlite3.R
 
 
 def get_disappeared_stories(
-    conn: sqlite3.Connection, min_peak_sources: int = 2
+    conn: sqlite3.Connection, min_peak_sources: int = 1
 ) -> list[sqlite3.Row]:
     return conn.execute(
         f"""{_STORY_SELECT}
@@ -424,6 +443,15 @@ def headline_count(conn: sqlite3.Connection) -> int:
 def story_count(conn: sqlite3.Connection) -> int:
     row = conn.execute("SELECT COUNT(*) AS n FROM stories").fetchone()
     return row["n"] if row else 0
+
+
+def get_story_source_names(conn: sqlite3.Connection, story_id: int) -> list[str]:
+    """Return distinct source names for a story, ordered alphabetically."""
+    rows = conn.execute(
+        "SELECT DISTINCT source FROM headlines WHERE story_id = ? ORDER BY source",
+        (story_id,),
+    ).fetchall()
+    return [r["source"] for r in rows]
 
 
 # ------------------------------------------------------------------

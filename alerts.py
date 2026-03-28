@@ -13,12 +13,10 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-import urllib.request
 import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from typing import Any
-
-import db
 
 log = logging.getLogger(__name__)
 

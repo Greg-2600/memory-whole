@@ -1,19 +1,67 @@
-# Example feeds.yaml for Memory Mountain RSS Digest
+# Example feeds.yaml for Memory Whole
+#
+# Each feed needs: name, url, lean
+# Lean values: left | center-left | center | center-right | right | international
 
 feeds:
-  - name: Example News
-    url: https://example.com/rss
-    lean: center            # left | center-left | center | center-right | right | international
-
-  - name: TechCrunch
-    url: http://feeds.feedburner.com/TechCrunch/
+  # ── Wire services ─────────────────────────────────────────
+  - name: AP News
+    url: https://feedx.net/rss/ap.xml
     lean: center
-  - name: Drudge Report
-    url: https://www.drudgereport.com/rss.xml
+  - name: Reuters
+    url: https://www.reutersagency.com/feed/
+    lean: center
+
+  # ── Broadcast ─────────────────────────────────────────────
+  - name: CNN Top Stories
+    url: https://rss.cnn.com/rss/edition.rss
+    lean: center-left
+  - name: FOX News Latest
+    url: https://moxie.foxnews.com/google-publisher/latest.xml
     lean: right
-  - name: Rantingly
-    url: https://rantingly.com/feed
+  - name: NPR News
+    url: https://feeds.npr.org/1001/rss.xml
+    lean: center-left
+
+  # ── Major papers ──────────────────────────────────────────
+  - name: NY Times
+    url: https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml
+    lean: center-left
+  - name: Wall Street Journal
+    url: https://feeds.a.dj.com/rss/RSSWorldNews.xml
+    lean: center-right
+  - name: Washington Post
+    url: https://feeds.washingtonpost.com/rss/national
+    lean: center-left
+
+  # ── Center / Political ────────────────────────────────────
+  - name: Politico
+    url: https://www.politico.com/rss/politicopicks.xml
+    lean: center
+  - name: The Hill
+    url: https://thehill.com/feed/
+    lean: center
+
+  # ── Right-leaning ─────────────────────────────────────────
+  - name: Breitbart
+    url: https://feeds.feedburner.com/breitbart
     lean: right
+  - name: National Review
+    url: https://www.nationalreview.com/feed/
+    lean: right
+
+  # ── Left-leaning ──────────────────────────────────────────
+  - name: HuffPost
+    url: https://www.huffpost.com/section/front-page/feed
+    lean: left
+  - name: The Intercept
+    url: https://theintercept.com/feed/?rss
+    lean: left
+
+  # ── International ─────────────────────────────────────────
+  - name: BBC (US & Canada)
+    url: https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml
+    lean: international
 
 settings:
   # output directory for generated markdown and artifacts
@@ -47,7 +95,7 @@ silence:
 # Alerts: push notifications for disappearing stories
 alerts:
   enabled: false
-  ntfy_topic: ""              # free push via https://ntfy.sh (e.g., "my-memory-mountain")
+  ntfy_topic: ""              # free push via https://ntfy.sh (e.g., "my-memory-whole")
   min_peak_sources: 3
   webhook_url: ""             # optional generic JSON webhook
 

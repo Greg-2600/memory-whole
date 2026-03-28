@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Helper script to run common Memory Mountain workflows
+# Helper script to run common Memory Whole workflows
 # Make executable with: `chmod +x scripts/run.sh`
 
 set -euo pipefail

@@ -76,7 +76,9 @@ class TestItemDatetime(unittest.TestCase):
     def test_published_parsed(self) -> None:
         entry = {"published_parsed": dt.datetime(2026, 1, 15, 10, 0, 0).timetuple()}
         result = item_datetime(entry)
-        self.assertEqual(result, dt.datetime(2026, 1, 15, 10, 0, 0, tzinfo=dt.timezone.utc))
+        self.assertEqual(
+            result, dt.datetime(2026, 1, 15, 10, 0, 0, tzinfo=dt.timezone.utc)
+        )
 
     def test_updated_parsed_fallback(self) -> None:
         entry = {"updated_parsed": dt.datetime(2026, 6, 1, 8, 0, 0).timetuple()}

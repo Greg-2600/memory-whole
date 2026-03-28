@@ -10,7 +10,7 @@ class TestContainerInfra(unittest.TestCase):
 
     def test_docker_compose_has_volume_and_env(self):
         dc = Path("docker-compose.yml").read_text(encoding="utf-8")
-        self.assertIn("mm_output", dc)
+        self.assertIn("mw_output", dc)
         self.assertIn("FORCE_REGEN", dc)
 
     def test_entrypoint_exists_and_is_executable(self):

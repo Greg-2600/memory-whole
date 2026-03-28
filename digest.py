@@ -34,7 +34,7 @@ def _build_digest_text(conn: sqlite3.Connection, config: dict[str, Any]) -> str:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     lines: list[str] = []
 
-    lines.append(f"=== Memory Mountain Daily Digest — {today} ===")
+    lines.append(f"=== Memory Whole Daily Digest — {today} ===")
     lines.append("")
 
     # Stats
@@ -91,7 +91,7 @@ def _build_digest_text(conn: sqlite3.Connection, config: dict[str, Any]) -> str:
     if len(lines) <= 4:
         lines.append("No significant activity to report.")
 
-    lines.append("— Memory Mountain")
+    lines.append("— Memory Whole")
     return "\n".join(lines)
 
 
@@ -159,7 +159,7 @@ def run_digest(
         truncated = text[:3900] + ("\n[truncated]" if len(text) > 3900 else "")
         send_ntfy(
             ntfy_topic,
-            f"Memory Mountain Digest — {today}",
+            f"Memory Whole Digest — {today}",
             truncated,
             priority="default",
         )
@@ -172,7 +172,7 @@ def run_digest(
     smtp_port = int(digest_cfg.get("smtp_port", 587))
     if smtp["smtp_host"]:
         _send_email(
-            subject=f"Memory Mountain Digest — {today}",
+            subject=f"Memory Whole Digest — {today}",
             body=text,
             smtp_host=smtp["smtp_host"],
             smtp_port=smtp_port,

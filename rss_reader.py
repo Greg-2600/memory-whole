@@ -1,4 +1,4 @@
-"""RSS reader / Memory Mountain CLI.
+"""RSS reader / Memory Whole CLI.
 
 Main entry point: fetches RSS feeds, stores headlines in a SQLite database,
 clusters them into stories, tracks story lifecycles (active → fading → gone),
@@ -19,32 +19,30 @@ import re
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 # New pipeline modules
 import feedparser
+import yaml
 
+import alerts
+import dashboard
 import db as db_mod
+import digest
 import fetcher
 import tracker
-import dashboard
-import alerts
-import digest
 from utils import (
     DEFAULT_USER_AGENT,
+    favicon_for_source,
     first_non_empty,
     item_datetime,
     slugify,
-    strip_html,
     summarize_text,
-    favicon_for_source,
 )
 
 # Optional heavy deps for legacy clustering path
 try:
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.decomposition import TruncatedSVD
     from sklearn.cluster import DBSCAN
+    from sklearn.decomposition import TruncatedSVD
+    from sklearn.feature_extraction.text import TfidfVectorizer
 except Exception:  # pragma: no cover - optional import
     TfidfVectorizer = None  # type: ignore
     TruncatedSVD = None  # type: ignore
@@ -54,7 +52,7 @@ except Exception:  # pragma: no cover - optional import
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Memory Mountain — track news headlines over time.",
+        description="Memory Whole — track news headlines over time.",
     )
     parser.add_argument(
         "--config",
@@ -168,117 +166,6 @@ def load_config(path: Path) -> dict[str, Any]:
     # Allow feeds to be fetched with a configurable User-Agent (helps bypass simple bot blocks)
     data["settings"].setdefault("user_agent", DEFAULT_USER_AGENT)
     return data
-
-
-def slugify(value: str) -> str:
-    """Return a URL-safe slug for `value`.
-
-    Converts to lower-case, replaces non-alphanumeric groups with `-` and
-    strips leading/trailing dashes.
-    """
-    value = value.strip().lower()
-    value = re.sub(r"[^a-z0-9]+", "-", value)
-    value = re.sub(r"-+", "-", value).strip("-")
-    return value or "feed"
-
-
-def favicon_for_source(source_name: str) -> str:
-    """Return a favicon URL for a given source name.
-
-    Uses a small heuristic mapping of common source names to domains and
-    Google S2 favicon service for convenience. Falls back to a generic
-    favicon service using the source_name lowercased as a domain-like token.
-    """
-    if not source_name:
-        return ""
-    s = source_name.lower()
-    mapping = {
-        "cnn": "cnn.com",
-        "msnbc": "msnbc.com",
-        "fox": "foxnews.com",
-        "fox news": "foxnews.com",
-        "patriots.win": "patriots.win",
-        "patriots": "patriots.win",
-        "google": "news.google.com",
-        "google news": "news.google.com",
-        "bbc": "bbc.co.uk",
-        "bbc america": "bbc.co.uk",
-        "npr": "npr.org",
-    }
-    for k, dom in mapping.items():
-        if k in s:
-            return f"https://www.google.com/s2/favicons?sz=64&domain={dom}"
-
-    # Try to extract a domain-looking token from the source name
-    token = re.sub(r"[^a-z0-9.-]", "", s.split()[0])
-    if token and "." in token:
-        return f"https://www.google.com/s2/favicons?sz=64&domain={token}"
-
-    # final fallback: use google s2 with the source token as domain
-    return f"https://www.google.com/s2/favicons?sz=64&domain={token or 'example.com'}"
-
-
-def item_datetime(entry: dict[str, Any]) -> dt.datetime | None:
-    """Extract a timezone-aware datetime from a feed entry, if available.
-
-    Checks `published_parsed` then `updated_parsed` for time structs and
-    returns a UTC datetime or None.
-    """
-    for key in ("published_parsed", "updated_parsed"):
-        time_struct = entry.get(key)
-        if time_struct:
-            try:
-                return dt.datetime(*time_struct[:6], tzinfo=dt.timezone.utc)
-            except (TypeError, ValueError):
-                continue
-    return None
-
-
-def first_non_empty(*values: Any) -> str:
-    """Return the first non-empty string from `values` or an empty string.
-
-    Non-string values are ignored.
-    """
-    for value in values:
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    return ""
-
-
-def strip_html(value: str) -> str:
-    """Remove HTML tags and collapse whitespace, unescaping HTML entities."""
-    text = re.sub(r"<[^>]+>", " ", value)
-    text = html.unescape(text)
-    return re.sub(r"\s+", " ", text).strip()
-
-
-def summarize_text(value: str, max_sentences: int = 2, max_words: int = 80) -> str:
-    """Produce a compact summary from `value`.
-
-    The function strips HTML, extracts up to `max_sentences` sentences, and
-    truncates to at most `max_words` words adding an ellipsis when truncated.
-    """
-    if not value.strip():
-        return ""
-
-    cleaned = strip_html(value)
-    if not cleaned:
-        return ""
-
-    sentence_candidates = re.split(r"(?<=[.!?])\s+", cleaned)
-    selected_sentences: list[str] = []
-
-    for sentence in sentence_candidates:
-        if sentence.strip():
-            selected_sentences.append(sentence.strip())
-        if len(selected_sentences) >= max_sentences:
-            break
-
-    summary = " ".join(selected_sentences).strip() or cleaned
-    words = summary.split()
-    if len(words) > max_words:
-        summary = " ".join(words[:max_words]).rstrip(".,;:!?") + "..."
-    return summary
 
 
 def markdown_for_feed(
@@ -855,16 +742,16 @@ def write_calendar_html(
 
                     # include useful data attributes for client-side filtering and sorting
                     data_sources = html.escape("|".join(srcs))
-                    data_label = html.escape(str(p.get("label", c.get("label", ""))))
-                    data_score = float(p.get("score", c.get("score", 0.0)))
-                    data_mentions = int(p.get("mentions", c.get("mentions", 0)))
-                    data_start = p.get("start", c.get("start", ""))
+                    data_label = html.escape(str(p.get("label", "")))
+                    data_score = float(p.get("score", 0.0))
+                    data_mentions = int(p.get("mentions", 0))
+                    data_start = p.get("start", "")
                     data_start = (
                         data_start.isoformat()
                         if hasattr(data_start, "isoformat")
                         else str(data_start)
                     )
-                    data_end = p.get("end", c.get("end", ""))
+                    data_end = p.get("end", "")
                     data_end = (
                         data_end.isoformat()
                         if hasattr(data_end, "isoformat")
@@ -1210,7 +1097,7 @@ def main() -> None:  # pylint: disable=too-many-locals
         else int(settings["max_items_per_feed"])
     )
 
-    db_path = output_dir / "memory_mountain.db"
+    db_path = output_dir / "memory_whole.db"
 
     # ------------------------------------------------------------------
     # Legacy code paths (backward compat)
@@ -1278,7 +1165,9 @@ def main() -> None:  # pylint: disable=too-many-locals
         conn.commit()
         print(f"Imported {imported} headlines from markdown into {db_path}")
         # Track after import — use wide window to capture all historical data
-        tracker.track_stories(conn, cluster_days=365)
+        story_events = tracker.track_stories(conn, cluster_days=365)
+        if story_events:
+            print(f"  {len(story_events)} story merge/split event(s) detected")
         # Backfill snapshots from historical headline dates (not just today)
         snap_count = db_mod.backfill_daily_snapshots(conn)
         print(f"  Backfilled {snap_count} daily snapshot rows")
@@ -1319,19 +1208,67 @@ def main() -> None:  # pylint: disable=too-many-locals
         return
 
     # Default: fetch → track → dashboard → alerts → digest
+    feed_health = []
     if not getattr(args, "fetch_only", False):
+        # Validate feeds before fetching
+        from fetcher import validate_feeds
+
+        validation = validate_feeds(config)
+        errors = [v for v in validation if not v.ok]
+        warnings = [v for v in validation if v.warnings]
+        if errors:
+            print(f"Feed validation: {len(errors)} error(s)")
+            for v in errors:
+                for e in v.errors:
+                    print(f"  ERROR  {v.name}: {e}")
+        if warnings:
+            for v in warnings:
+                for w in v.warnings:
+                    print(f"  WARN   {v.name}: {w}")
+
+        first_run = db_mod.headline_count(conn) == 0
         print("Fetching feeds...")
-        count = fetcher.fetch_all_feeds(conn, config, max_items=max_items)
+        count, feed_health = fetcher.fetch_all_feeds(conn, config, max_items=max_items)
         print(f"  {count} headlines processed")
+
+        # Report feed health
+        failed = [fh for fh in feed_health if not fh.ok]
+        if failed:
+            print(f"  {len(failed)}/{len(feed_health)} feeds failed:")
+            for fh in failed:
+                print(f"    ✗ {fh.name}: {fh.error}")
+
+        if first_run:
+            print("First run detected — backpopulating historical data...")
+            bp_count = backpopulate_daily(
+                config,
+                output_dir,
+                max_items,
+                int(settings.get("summary_max_sentences", 6)),
+                int(settings.get("summary_max_words", 300)),
+            )
+            print(f"  Backpopulated {bp_count} daily file(s)")
 
     if not getattr(args, "fetch_only", False):
         print("Tracking stories...")
-        tracker.track_stories(conn)
+        story_events = tracker.track_stories(conn)
         print(f"  {db_mod.story_count(conn)} stories in database")
+        if story_events:
+            print(f"  {len(story_events)} story merge/split event(s):")
+            for ev in story_events:
+                if ev.event_type == "merge":
+                    print(
+                        f'    ⊕ Merged {len(ev.absorbed_ids)} stories into "{ev.survivor_title[:50]}"'
+                    )
+                else:
+                    print(f'    ⊖ Split from "{ev.survivor_title[:50]}"')
 
         print("Generating dashboard...")
-        dashboard.generate(conn, output_dir, config=config)
+        dashboard.generate(conn, output_dir, config=config, feed_health=feed_health)
         print(f"Dashboard written to: {output_dir / 'index.html'}")
+
+        # Write JSON export alongside dashboard
+        _write_json_export(conn, output_dir, config)
 
         # Disappearance alerts
         alert_count = alerts.run_alerts(conn, config)
@@ -1340,11 +1277,63 @@ def main() -> None:  # pylint: disable=too-many-locals
 
         # Daily digest
         if digest.run_digest(conn, config, output_dir=str(output_dir)):
-            print(f"  Digest generated")
+            print("  Digest generated")
     else:
         print("Fetch complete (--fetch-only, skipping tracking/dashboard)")
 
     conn.close()
+
+
+def _write_json_export(conn: Any, output_dir: Path, config: dict[str, Any]) -> None:
+    """Write JSON files for external consumption (API-like export)."""
+    import json
+
+    today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    top = db_mod.get_top_stories(conn, limit=50)
+    disappeared = db_mod.get_disappeared_stories(conn)
+
+    stories_out = []
+    for s in top:
+        sources = db_mod.get_story_source_names(conn, s["id"])
+        stories_out.append(
+            {
+                "id": s["id"],
+                "title": s["representative_title"],
+                "status": s["status"],
+                "importance_score": round(float(s["importance_score"]), 2),
+                "source_count": s["source_count"],
+                "mention_count": s["mention_count"],
+                "peak_source_count": s["peak_source_count"],
+                "first_seen": s["first_seen"],
+                "last_seen": s["last_seen"],
+                "sources": sources,
+            }
+        )
+
+    disappeared_out = []
+    for s in disappeared:
+        disappeared_out.append(
+            {
+                "id": s["id"],
+                "title": s["representative_title"],
+                "peak_source_count": s["peak_source_count"],
+                "first_seen": s["first_seen"],
+                "last_seen": s["last_seen"],
+            }
+        )
+
+    export = {
+        "generated_at": today,
+        "headline_count": db_mod.headline_count(conn),
+        "story_count": db_mod.story_count(conn),
+        "top_stories": stories_out,
+        "disappeared_stories": disappeared_out,
+    }
+
+    (output_dir / "api.json").write_text(
+        json.dumps(export, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
 
 def _legacy_detect_from_markdown(

@@ -36,6 +36,11 @@ feeds:
     url: https://nypost.com/feed/
     lean: center-right
 
+  # ── Wire services ───────────────────────────────────────
+  - name: Reuters
+    url: https://www.reutersagency.com/feed/
+    lean: center
+
   # ── Center / Political ──────────────────────────────────
   - name: The Hill
     url: https://thehill.com/feed/
@@ -43,11 +48,26 @@ feeds:
   - name: RealClearPolitics
     url: https://www.realclearpolitics.com/index.xml
     lean: center-right
+  - name: Politico
+    url: https://www.politico.com/rss/politicopicks.xml
+    lean: center
+  - name: USA Today
+    url: https://rssfeeds.usatoday.com/UsatodaycomNation-TopStories
+    lean: center
   - name: CNBC Top News
     url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114
     lean: center
 
   # ── Right-leaning ───────────────────────────────────────
+  - name: Wall Street Journal
+    url: https://feeds.a.dj.com/rss/RSSWorldNews.xml
+    lean: center-right
+  - name: Washington Examiner
+    url: https://www.washingtonexaminer.com/feed
+    lean: center-right
+  - name: National Review
+    url: https://www.nationalreview.com/feed/
+    lean: right
   - name: Breitbart
     url: https://feeds.feedburner.com/breitbart
     lean: right
@@ -68,6 +88,15 @@ feeds:
     lean: right
 
   # ── Left-leaning ────────────────────────────────────────
+  - name: HuffPost
+    url: https://www.huffpost.com/section/front-page/feed
+    lean: left
+  - name: Mother Jones
+    url: https://www.motherjones.com/feed/
+    lean: left
+  - name: Vox
+    url: https://www.vox.com/rss/index.xml
+    lean: center-left
   - name: The Intercept
     url: https://theintercept.com/feed/?rss
     lean: left
@@ -84,6 +113,9 @@ feeds:
     lean: center-left
   - name: Al Jazeera
     url: https://www.aljazeera.com/xml/rss/all.xml
+    lean: international
+  - name: France 24
+    url: https://www.france24.com/en/rss
     lean: international
 
   # ── Aggregators ─────────────────────────────────────────

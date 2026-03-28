@@ -10,14 +10,14 @@ COPY requirements.txt ./
 RUN apt-get update \
  && apt-get install -y --no-install-recommends cron ca-certificates curl \
  && rm -rf /var/lib/apt/lists/* \
- && pip install --no-cache-dir -r requirements.txt scikit-learn numpy || true
+ && pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
 COPY . /app
 
 # copy cron job into the image (will persist when container runs)
-COPY scripts/container_cron /etc/cron.d/memory_mountain
-RUN chmod 0644 /etc/cron.d/memory_mountain \
+COPY scripts/container_cron /etc/cron.d/memory_whole
+RUN chmod 0644 /etc/cron.d/memory_whole \
  && mkdir -p /app/logs /app/output
 
 # Ensure entrypoint is executable and expose port
@@ -30,4 +30,4 @@ ENTRYPOINT ["./scripts/docker_entrypoint.sh"]
 
 # Healthcheck: verify the static server responds on /calendar.html
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-	CMD curl -f http://localhost:4747/calendar.html || exit 1
+	CMD curl -f http://localhost:4747/index.html || exit 1

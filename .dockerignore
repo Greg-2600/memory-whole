@@ -1,9 +1,30 @@
-# Ignore virtualenv, git, and Python cache
+# VCS & editors
+.git
+.github
+.vscode
+.idea
+
+# Python environments & caches
 .venv
+venv
 __pycache__
 *.pyc
 *.pyo
-.git
+*.egg-info
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Runtime artifacts
 output/
 logs/
 .env
+
+# Dev / temp
+.tmp_markdown
+.tmp_test_output
+tests/
+requirements-dev.txt
+Makefile
+LICENSE
+README.md

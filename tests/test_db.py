@@ -262,9 +262,7 @@ class TestStories(unittest.TestCase):
         active = conn.execute(
             "SELECT status FROM stories WHERE slug = 'active'"
         ).fetchone()
-        gone = conn.execute(
-            "SELECT status FROM stories WHERE slug = 'gone'"
-        ).fetchone()
+        gone = conn.execute("SELECT status FROM stories WHERE slug = 'gone'").fetchone()
         self.assertEqual(active["status"], "active")
         self.assertEqual(gone["status"], "gone")
         conn.close()
@@ -325,7 +323,9 @@ class TestStories(unittest.TestCase):
             (sid,),
         ).fetchone()
         # Longest title should be picked as representative
-        self.assertEqual(row["representative_title"], "A much longer headline title here")
+        self.assertEqual(
+            row["representative_title"], "A much longer headline title here"
+        )
         self.assertGreater(row["importance_score"], 0)
         conn.close()
 

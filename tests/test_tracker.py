@@ -108,6 +108,45 @@ class TestTrackStories(unittest.TestCase):
         self.assertEqual(count1, count2)
         conn.close()
 
+    def test_track_stories_returns_event_list(self) -> None:
+        conn = _make_conn()
+        _insert_headlines(
+            conn,
+            [
+                {
+                    "url": "http://example.com/ev1",
+                    "title": "Event return test",
+                    "source": "A",
+                    "published_at": "2026-03-27",
+                    "first_seen": "2026-03-27",
+                    "last_seen": "2026-03-27",
+                    "summary": "",
+                },
+            ],
+        )
+        events = tracker.track_stories(conn)
+        self.assertIsInstance(events, list)
+        conn.close()
+
+    def test_track_stories_empty_db_returns_empty_list(self) -> None:
+        conn = _make_conn()
+        events = tracker.track_stories(conn)
+        self.assertIsInstance(events, list)
+        self.assertEqual(events, [])
+        conn.close()
+
+    def test_story_event_dataclass(self) -> None:
+        event = tracker.StoryEvent(
+            event_type="merge",
+            survivor_id=1,
+            survivor_title="Test Story",
+            absorbed_ids=[2, 3],
+            absorbed_titles=["Story B", "Story C"],
+        )
+        self.assertEqual(event.event_type, "merge")
+        self.assertEqual(event.survivor_id, 1)
+        self.assertEqual(len(event.absorbed_ids), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

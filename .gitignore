@@ -10,19 +10,27 @@ __pycache__/
 build/
 dist/
 
-# Editor directories
+# Editor
 .vscode/
 .idea/
 
-# Test and coverage
+# Test / coverage
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 .coverage
+htmlcov/
 
-# Output
+# Output (generated at runtime)
 output/
 
-# macOS
+# User-specific feed config (use feeds.example.yaml as template)
+feeds.yaml
+
+# Temp dirs from legacy runs
+.tmp_markdown/
+.tmp_test_output/
+
+# OS
 .DS_Store
-.tmp_test_output/
-.tmp_test_output/
+Thumbs.db

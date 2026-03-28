@@ -28,7 +28,7 @@ else
 fi
 
 # If there are existing markdown files but no DB yet, import them first
-if [ ! -f output/memory_mountain.db ] && [ -n "$(ls output/*.md 2>/dev/null || true)" ]; then
+if [ ! -f output/memory_whole.db ] && [ -n "$(ls output/*.md 2>/dev/null || true)" ]; then
   echo "[entrypoint] importing existing markdown files into database..."
   "$PYTHON" rss_reader.py --import-markdown || echo "[entrypoint] markdown import failed"
 fi

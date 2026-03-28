@@ -2,7 +2,7 @@
 
 A "silence gap" exists when a story has meaningful coverage from left-leaning
 sources but zero (or near-zero) coverage from right-leaning sources, or
-vice versa.  This is the core insight of Memory Mountain — revealing what
+vice versa.  This is the core insight of Memory Whole — revealing what
 each side of the political spectrum chooses *not* to report.
 """
 

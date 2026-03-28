@@ -1,4 +1,4 @@
-"""Shared utilities for Memory Mountain."""
+"""Shared utilities for Memory Whole."""
 
 from __future__ import annotations
 
@@ -103,6 +103,17 @@ def favicon_for_source(source_name: str) -> str:
         "bbc": "bbc.co.uk",
         "drudge": "drudgereport.com",
         "rantingly": "rantingly.com",
+        "reuters": "reuters.com",
+        "wall street": "wsj.com",
+        "wsj": "wsj.com",
+        "politico": "politico.com",
+        "washington examiner": "washingtonexaminer.com",
+        "national review": "nationalreview.com",
+        "huffpost": "huffpost.com",
+        "mother jones": "motherjones.com",
+        "vox": "vox.com",
+        "usa today": "usatoday.com",
+        "france 24": "france24.com",
     }
     for k, dom in mapping.items():
         if k in s:
@@ -140,6 +151,17 @@ SOURCE_COLORS = {
     "patriots": "#b91c1c",
     "drudge": "#222222",
     "rantingly": "#7c3aed",
+    "reuters": "#ff8000",
+    "wall street": "#0080c3",
+    "wsj": "#0080c3",
+    "politico": "#256fb8",
+    "washington examiner": "#d02027",
+    "national review": "#013a6f",
+    "huffpost": "#0dbe98",
+    "mother jones": "#d42b10",
+    "vox": "#f0c830",
+    "usa today": "#009bff",
+    "france 24": "#0052a5",
 }
 
 
@@ -173,6 +195,17 @@ SOURCE_LEAN: dict[str, str] = {
     "patriots": "right",
     "drudge": "right",
     "rantingly": "right",
+    "reuters": "center",
+    "wall street": "center-right",
+    "wsj": "center-right",
+    "politico": "center",
+    "washington examiner": "center-right",
+    "national review": "right",
+    "huffpost": "left",
+    "mother jones": "left",
+    "vox": "center-left",
+    "usa today": "center",
+    "france 24": "international",
 }
 
 

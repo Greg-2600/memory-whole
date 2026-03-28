@@ -42,7 +42,7 @@ def generate(
     cfg = config or {}
     silence_cfg = cfg.get("silence", {})
     if silence_cfg.get("enabled", True):
-        min_src = int(silence_cfg.get("min_sources_covering", 2))
+        min_src = int(silence_cfg.get("min_sources_covering", 1))
         lookback = int(silence_cfg.get("lookback_days", 7))
         silence_gaps = detect_silence(
             conn, min_sources_covering=min_src, lookback_days=lookback

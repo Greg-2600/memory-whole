@@ -31,7 +31,7 @@ class SilenceGap:
 
 def detect_silence(
     conn: sqlite3.Connection,
-    min_sources_covering: int = 2,
+    min_sources_covering: int = 1,
     lookback_days: int = 7,
     reference_date: str | None = None,
 ) -> list[SilenceGap]:

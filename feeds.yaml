@@ -137,7 +137,7 @@ settings:
 silence:
   enabled: true
   # Minimum sources on one side before flagging silence on the other
-  min_sources_covering: 2
+  min_sources_covering: 1
   # How many days back to check for silence gaps
   lookback_days: 7
 

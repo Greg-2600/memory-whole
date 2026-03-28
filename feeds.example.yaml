@@ -89,7 +89,7 @@ settings:
 # Silence detection: find stories covered by one side but not the other
 silence:
   enabled: true
-  min_sources_covering: 2     # min sources on one side before flagging silence
+  min_sources_covering: 1     # min sources on one side before flagging silence
   lookback_days: 7
 
 # Alerts: push notifications for disappearing stories

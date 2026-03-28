@@ -1,10 +1,11 @@
 """Generate the Memory Mountain HTML dashboard.
 
-Produces a single-page dashboard with four views:
+Produces a single-page dashboard with five views:
   1. Top Stories   — highest-importance active stories
   2. Disappeared   — stories that were big but dropped off
-  3. Timeline      — heatmap of coverage over days
-  4. Sources       — which outlets covered which stories
+  3. Silence       — stories one political side ignores
+  4. Timeline      — heatmap of coverage over days
+  5. Sources       — which outlets covered which stories
 """
 
 from __future__ import annotations
@@ -15,13 +16,15 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import db
-from utils import color_for_source, slugify
+from silence import detect_silence
+from utils import color_for_source, lean_for_source, slugify
 
 
 def generate(
     conn: sqlite3.Connection,
     output_dir: Path,
     window_days: int = 30,
+    config: dict | None = None,
 ) -> None:
     """Write ``index.html`` and per-story detail pages into *output_dir*."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -32,6 +35,18 @@ def generate(
     disappeared = db.get_disappeared_stories(conn)
     all_stories = db.get_all_stories(conn)
     matrix_rows = db.get_source_story_matrix(conn, days=window_days)
+
+    # Silence detection
+    cfg = config or {}
+    silence_cfg = cfg.get("silence", {})
+    if silence_cfg.get("enabled", True):
+        min_src = int(silence_cfg.get("min_sources_covering", 2))
+        lookback = int(silence_cfg.get("lookback_days", 7))
+        silence_gaps = detect_silence(
+            conn, min_sources_covering=min_src, lookback_days=lookback
+        )
+    else:
+        silence_gaps = []
 
     # Preload sparkline data per story
     sparklines: dict[int, list[int]] = {}
@@ -70,6 +85,7 @@ def generate(
         source_matrix,
         matrix_stories,
         window_days,
+        silence_gaps,
     )
     (output_dir / "index.html").write_text(page, encoding="utf-8")
 
@@ -281,6 +297,7 @@ def _render_page(
     source_matrix: dict[str, dict[int, int]],
     matrix_stories: list[sqlite3.Row],
     window_days: int,
+    silence_gaps: list | None = None,
 ) -> str:
     # Top Stories cards
     top_cards = (
@@ -302,11 +319,15 @@ def _render_page(
     # Source matrix
     matrix = _render_source_matrix(all_sources, source_matrix, matrix_stories)
 
+    # Silence gaps
+    silence_html = _render_silence_gaps(silence_gaps or [])
+
     # Stats
     total_hl = sum(s["mention_count"] for s in all_stories)
     total_st = len(all_stories)
     active_ct = sum(1 for s in all_stories if s["status"] == "active")
     gone_ct = sum(1 for s in all_stories if s["status"] in ("fading", "gone"))
+    silence_ct = len(silence_gaps or [])
 
     return f"""\
 <!doctype html>
@@ -327,12 +348,14 @@ def _render_page(
     {html_mod.escape(now_str)} &middot;
     {total_hl} headlines &middot; {total_st} stories &middot;
     {active_ct} active &middot; {gone_ct} fading/gone
+    {f' &middot; {silence_ct} silence gap{"s" if silence_ct != 1 else ""}' if silence_ct else ''}
   </p>
 </header>
 
 <nav>
   <button class="tab active" data-tab="top">Top Stories</button>
   <button class="tab" data-tab="disappeared">Disappeared</button>
+  <button class="tab" data-tab="silence">Silence{f' ({silence_ct})' if silence_ct else ''}</button>
   <button class="tab" data-tab="timeline">Timeline</button>
   <button class="tab" data-tab="sources">Sources</button>
 </nav>
@@ -354,6 +377,12 @@ def _render_page(
   <div class="card-list">{dis_cards}</div>
 </section>
 
+<section id="tab-silence" class="tab-content">
+  <h2>Silence Gaps</h2>
+  <p class="section-desc">Stories covered by one political side but ignored by the other. The core of what we track.</p>
+  {silence_html}
+</section>
+
 <section id="tab-timeline" class="tab-content">
   <h2>Timeline</h2>
   <p class="section-desc">Source coverage per day over the last {window_days} days. Darker = more sources.</p>
@@ -372,6 +401,53 @@ def _render_page(
 
 </body>
 </html>"""
+
+
+# ------------------------------------------------------------------
+# Silence gaps
+# ------------------------------------------------------------------
+
+
+def _render_silence_gaps(gaps: list) -> str:
+    """Render silence gap cards showing left/right asymmetry."""
+    if not gaps:
+        return '<p class="empty">No silence gaps detected. This is good — or there isn\'t enough data yet.</p>'
+
+    lines: list[str] = []
+    for g in gaps:
+        title_esc = html_mod.escape(g.title or "Story")
+        silent = g.silent_side
+        if silent == "right":
+            badge_class = "silence-right"
+            badge_text = "RIGHT SILENT"
+            covering_label = "Left/Center covering"
+            covering = g.left_sources + g.center_sources
+        else:
+            badge_class = "silence-left"
+            badge_text = "LEFT SILENT"
+            covering_label = "Right/Center covering"
+            covering = g.right_sources + g.center_sources
+
+        source_pills = " ".join(
+            f'<span class="src-pill" style="background:{color_for_source(s)}">'
+            f"{html_mod.escape(s)}</span>"
+            for s in covering[:8]
+        )
+
+        lines.append(f"""\
+<div class="silence-card {badge_class}">
+  <div class="silence-top">
+    <span class="silence-badge {badge_class}">{badge_text}</span>
+    <h3><a href="story_{g.story_id}.html">{title_esc}</a></h3>
+  </div>
+  <div class="silence-meta">
+    <span class="covering-label">{covering_label}:</span>
+    {source_pills}
+  </div>
+  <div class="silence-score">Score: {g.importance_score:.1f}</div>
+</div>""")
+
+    return "\n".join(lines)
 
 
 # ------------------------------------------------------------------
@@ -529,6 +605,24 @@ h2{font-family:Georgia,'Times New Roman',serif;font-size:1.4em;margin:0 0 4px}
 .status-pill.gone{background:#9ca3af}
 .days-gone{color:#9ca3af;font-style:italic;font-size:12px}
 
+/* Silence gaps */
+.silence-card{
+  background:#fff;border:1px solid #e5e7eb;border-left:4px solid #9333ea;
+  border-radius:8px;padding:14px 18px;margin-bottom:10px;
+}
+.silence-card.silence-right{border-left-color:#dc2626}
+.silence-card.silence-left{border-left-color:#2563eb}
+.silence-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.silence-top h3{margin:0;font-size:1.05em}
+.silence-top h3 a{color:inherit}
+.silence-badge{padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;color:#fff}
+.silence-badge.silence-right{background:#dc2626}
+.silence-badge.silence-left{background:#2563eb}
+.silence-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:#6b7280;margin-bottom:4px}
+.covering-label{font-weight:600}
+.src-pill{color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.silence-score{font-size:12px;color:#9ca3af}
+
 /* Heatmap */
 .heatmap-wrap{overflow-x:auto;margin-top:8px}
 .heatmap{border-collapse:collapse;font-size:11px;width:100%}
@@ -569,6 +663,10 @@ h2{font-family:Georgia,'Times New Roman',serif;font-size:1.4em;margin:0 0 4px}
   .matrix th,.matrix td{border-color:#2a2a3e}
   .mx-cell.filled{background:#1e3a5f}
   .heatmap .story-col a,.matrix .story-col a{color:#e5e7eb}
+  .silence-card{background:#1a1a2e;border-color:#2a2a3e}
+  .silence-top h3 a{color:#e5e7eb}
+  .silence-meta{color:#8888aa}
+  .silence-score{color:#6b7280}
 }
 """
 

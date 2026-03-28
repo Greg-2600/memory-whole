@@ -143,6 +143,39 @@ SOURCE_COLORS = {
 }
 
 
+# Political lean mapping: source name fragment → lean category.
+# Used by silence detection to identify coverage asymmetries.
+# Categories: left, center-left, center, center-right, right, international
+SOURCE_LEAN: dict[str, str] = {
+    "cnn": "center-left",
+    "msnbc": "left",
+    "fox": "right",
+    "abc": "center",
+    "cbs": "center",
+    "pbs": "center-left",
+    "npr": "center-left",
+    "ap ": "center",
+    "ny times": "center-left",
+    "washington post": "center-left",
+    "ny post": "center-right",
+    "the hill": "center",
+    "realclear": "center-right",
+    "cnbc": "center",
+    "breitbart": "right",
+    "daily wire": "right",
+    "federalist": "right",
+    "intercept": "left",
+    "democracy now": "left",
+    "guardian": "center-left",
+    "al jazeera": "international",
+    "bbc": "international",
+    "google": "center",
+    "patriots": "right",
+    "drudge": "right",
+    "rantingly": "right",
+}
+
+
 def color_for_source(source_name: str) -> str:
     """Return a hex colour for a source, falling back to gray."""
     s = source_name.lower()
@@ -150,3 +183,17 @@ def color_for_source(source_name: str) -> str:
         if k in s:
             return c
     return "#6b7280"
+
+
+def lean_for_source(source_name: str) -> str:
+    """Return the political lean for a source, or 'unknown'."""
+    s = source_name.lower()
+    for k, lean in SOURCE_LEAN.items():
+        if k in s:
+            return lean
+    return "unknown"
+
+
+# Lean groupings used by silence detection
+LEFT_LEANS = frozenset({"left", "center-left"})
+RIGHT_LEANS = frozenset({"right", "center-right"})

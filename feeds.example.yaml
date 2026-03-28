@@ -3,13 +3,17 @@
 feeds:
   - name: Example News
     url: https://example.com/rss
+    lean: center            # left | center-left | center | center-right | right | international
 
   - name: TechCrunch
     url: http://feeds.feedburner.com/TechCrunch/
+    lean: center
   - name: Drudge Report
     url: https://www.drudgereport.com/rss.xml
+    lean: right
   - name: Rantingly
     url: https://rantingly.com/feed
+    lean: right
 
 settings:
   # output directory for generated markdown and artifacts
@@ -34,3 +38,26 @@ settings:
   summary_max_sentences: 6
   summary_max_words: 300
 
+# Silence detection: find stories covered by one side but not the other
+silence:
+  enabled: true
+  min_sources_covering: 2     # min sources on one side before flagging silence
+  lookback_days: 7
+
+# Alerts: push notifications for disappearing stories
+alerts:
+  enabled: false
+  ntfy_topic: ""              # free push via https://ntfy.sh (e.g., "my-memory-mountain")
+  min_peak_sources: 3
+  webhook_url: ""             # optional generic JSON webhook
+
+# Daily digest: summary notification/email
+digest:
+  enabled: false
+  ntfy_topic: ""
+  smtp_host: ""
+  smtp_port: 587
+  smtp_user: ""
+  smtp_pass: ""
+  smtp_from: ""
+  smtp_to: ""

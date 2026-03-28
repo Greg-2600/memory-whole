@@ -28,6 +28,8 @@ import db as db_mod
 import fetcher
 import tracker
 import dashboard
+import alerts
+import digest
 from utils import (
     DEFAULT_USER_AGENT,
     first_non_empty,
@@ -1280,7 +1282,7 @@ def main() -> None:  # pylint: disable=too-many-locals
         # Backfill snapshots from historical headline dates (not just today)
         snap_count = db_mod.backfill_daily_snapshots(conn)
         print(f"  Backfilled {snap_count} daily snapshot rows")
-        dashboard.generate(conn, output_dir)
+        dashboard.generate(conn, output_dir, config=config)
         print(f"Dashboard written to: {output_dir / 'index.html'}")
         conn.close()
         return
@@ -1311,12 +1313,12 @@ def main() -> None:  # pylint: disable=too-many-locals
 
     # --dashboard-only: regenerate without fetching
     if getattr(args, "dashboard_only", False):
-        dashboard.generate(conn, output_dir)
+        dashboard.generate(conn, output_dir, config=config)
         print(f"Dashboard written to: {output_dir / 'index.html'}")
         conn.close()
         return
 
-    # Default: fetch → track → dashboard
+    # Default: fetch → track → dashboard → alerts → digest
     if not getattr(args, "fetch_only", False):
         print("Fetching feeds...")
         count = fetcher.fetch_all_feeds(conn, config, max_items=max_items)
@@ -1328,8 +1330,17 @@ def main() -> None:  # pylint: disable=too-many-locals
         print(f"  {db_mod.story_count(conn)} stories in database")
 
         print("Generating dashboard...")
-        dashboard.generate(conn, output_dir)
+        dashboard.generate(conn, output_dir, config=config)
         print(f"Dashboard written to: {output_dir / 'index.html'}")
+
+        # Disappearance alerts
+        alert_count = alerts.run_alerts(conn, config)
+        if alert_count:
+            print(f"  {alert_count} disappearance alert(s) sent")
+
+        # Daily digest
+        if digest.run_digest(conn, config, output_dir=str(output_dir)):
+            print(f"  Digest generated")
     else:
         print("Fetch complete (--fetch-only, skipping tracking/dashboard)")
 

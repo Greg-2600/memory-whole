@@ -54,7 +54,7 @@ def generate(
     framing_divergences = analyze_framing(
         conn,
         min_sources=2,
-        min_divergence=0.15,
+        min_divergence=0.1,
         lookback_days=window_days,
     )
 

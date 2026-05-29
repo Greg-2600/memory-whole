@@ -6,9 +6,10 @@ WORKDIR /app
 
 # Copy only what's needed
 COPY requirements.txt ./
-# Install cron and small utilities needed to run service and cron
-RUN apt-get update \
- && apt-get install -y --no-install-recommends cron ca-certificates curl \
+# Install cron and small utilities needed to run service and cron.
+# Add retry/timeout settings to reduce transient network failures.
+RUN apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 update \
+ && apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 install -y --no-install-recommends cron ca-certificates curl \
  && rm -rf /var/lib/apt/lists/* \
  && pip install --no-cache-dir -r requirements.txt
 

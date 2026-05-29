@@ -1,6 +1,8 @@
 services:
   memory_whole:
-    build: .
+    build:
+      context: .
+      network: host
     dns:
       - 1.1.1.1
       - 8.8.8.8

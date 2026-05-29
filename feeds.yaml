@@ -1,162 +1,108 @@
+# Example feeds.yaml for Memory Whole
+#
+# Each feed needs: name, url, lean
+# Lean values: left | center-left | center | center-right | right | international
+
 feeds:
-  # ── Broadcast / Wire ──────────────────────────────────────
-  - name: CNN Top Stories
-    url: https://rss.cnn.com/rss/edition.rss
-    lean: center-left
-  - name: MSNBC Top Stories
-    url: https://www.msnbc.com/feeds/rss.xml
-    lean: left
-  - name: FOX News Latest
-    url: https://moxie.foxnews.com/google-publisher/latest.xml
-    lean: right
-  - name: ABC News
-    url: https://abcnews.go.com/abcnews/topstories
-    lean: center
-  - name: CBS News
-    url: https://www.cbsnews.com/latest/rss/main
-    lean: center
-  - name: PBS NewsHour
-    url: https://www.pbs.org/newshour/feeds/rss/headlines
-    lean: center-left
-  - name: NPR News
-    url: https://feeds.npr.org/1001/rss.xml
-    lean: center-left
+  # ── Wire services ─────────────────────────────────────────
   - name: AP News
     url: https://feedx.net/rss/ap.xml
     lean: center
+  - name: Reuters
+    url: https://news.google.com/rss/search?q=site:reuters.com&hl=en-US&gl=US&ceid=US:en
+    lean: center
 
-  # ── Major papers ────────────────────────────────────────
+  # ── Broadcast ─────────────────────────────────────────────
+  - name: ABC News
+    url: https://abcnews.go.com/abcnews/topstories
+    lean: center-left
+  - name: FOX News Latest
+    url: https://moxie.foxnews.com/google-publisher/latest.xml
+    lean: right
+  - name: NPR News
+    url: https://feeds.npr.org/1001/rss.xml
+    lean: center-left
+
+  # ── Major papers ──────────────────────────────────────────
   - name: NY Times
     url: https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml
     lean: center-left
-  - name: Washington Post
-    url: https://feeds.washingtonpost.com/rss/national
-    lean: center-left
-  - name: NY Post
-    url: https://nypost.com/feed/
-    lean: center-right
-
-  # ── Wire services ───────────────────────────────────────
-  - name: Reuters
-    url: https://www.reutersagency.com/feed/
-    lean: center
-
-  # ── Center / Political ──────────────────────────────────
-  - name: The Hill
-    url: https://thehill.com/feed/
-    lean: center
-  - name: RealClearPolitics
-    url: https://www.realclearpolitics.com/index.xml
-    lean: center-right
-  - name: Politico
-    url: https://www.politico.com/rss/politicopicks.xml
-    lean: center
-  - name: USA Today
-    url: https://rssfeeds.usatoday.com/UsatodaycomNation-TopStories
-    lean: center
-  - name: CNBC Top News
-    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114
-    lean: center
-
-  # ── Right-leaning ───────────────────────────────────────
   - name: Wall Street Journal
     url: https://feeds.a.dj.com/rss/RSSWorldNews.xml
     lean: center-right
-  - name: Washington Examiner
-    url: https://www.washingtonexaminer.com/feed
-    lean: center-right
-  - name: National Review
-    url: https://www.nationalreview.com/feed/
-    lean: right
+  - name: Washington Post
+    url: https://feeds.washingtonpost.com/rss/national
+    lean: center-left
+
+  # ── Center / Political ────────────────────────────────────
+  - name: Axios
+    url: https://api.axios.com/feed/
+    lean: center
+  - name: The Hill
+    url: https://thehill.com/feed/
+    lean: center
+
+  # ── Right-leaning ─────────────────────────────────────────
   - name: Breitbart
     url: https://feeds.feedburner.com/breitbart
     lean: right
-  - name: Daily Wire
-    url: https://www.dailywire.com/feeds/rss.xml
-    lean: right
-  - name: The Federalist
-    url: https://thefederalist.com/feed/
-    lean: right
-  - name: Drudge Report
-    url: https://www.drudgereport.com/rss.xml
-    lean: right
-  - name: Rantingly
-    url: https://rantingly.com/feed
-    lean: right
-  - name: Patriots.win (forum)
-    url: https://patriots.win/feed
+  - name: National Review
+    url: https://www.nationalreview.com/feed/
     lean: right
 
-  # ── Left-leaning ────────────────────────────────────────
+  # ── Left-leaning ──────────────────────────────────────────
   - name: HuffPost
     url: https://www.huffpost.com/section/front-page/feed
     lean: left
-  - name: Mother Jones
-    url: https://www.motherjones.com/feed/
-    lean: left
-  - name: Vox
-    url: https://www.vox.com/rss/index.xml
-    lean: center-left
   - name: The Intercept
     url: https://theintercept.com/feed/?rss
     lean: left
-  - name: Democracy Now
-    url: https://www.democracynow.org/democracynow.rss
-    lean: left
 
-  # ── International ───────────────────────────────────────
+  # ── International ─────────────────────────────────────────
   - name: BBC (US & Canada)
     url: https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml
     lean: international
-  - name: The Guardian US
-    url: https://www.theguardian.com/us-news/rss
-    lean: center-left
-  - name: Al Jazeera
-    url: https://www.aljazeera.com/xml/rss/all.xml
-    lean: international
-  - name: France 24
-    url: https://www.france24.com/en/rss
-    lean: international
-
-  # ── Aggregators ─────────────────────────────────────────
-  - name: Google News (US)
-    url: https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en
-    lean: center
 
 settings:
+  # output directory for generated markdown and artifacts
   output_dir: output
+
+  # how many items to fetch per feed by default (can be overridden with --max-items)
   max_items_per_feed: 250
+
+  # whether to merge all sources into a single daily digest
   merge_all_sources: true
+
+  # filename template for merged daily digests (supports {date})
   merged_filename: daily-news-{date}.md
+
+  # H1 title template for merged digests (supports {date})
   daily_title: Daily RSS Digest - {date}
+
+  # write one markdown file per feed in addition to the merged digest
   write_individual_feeds: false
+
+  # summary defaults (can be overridden via CLI)
   summary_max_sentences: 6
   summary_max_words: 300
 
-# Silence detection: identify stories covered by one side but not the other
+# Silence detection: find stories covered by one side but not the other
 silence:
   enabled: true
-  # Minimum sources on one side before flagging silence on the other
-  min_sources_covering: 1
-  # How many days back to check for silence gaps
+  min_sources_covering: 1     # min sources on one side before flagging silence
   lookback_days: 7
 
 # Alerts: push notifications for disappearing stories
 alerts:
   enabled: false
-  # ntfy.sh topic (free push notifications — visit https://ntfy.sh)
-  ntfy_topic: ""
-  # Only alert for stories that reached this peak source count
+  ntfy_topic: ""              # free push via https://ntfy.sh (e.g., "my-memory-whole")
   min_peak_sources: 3
-  # Webhook URL (optional, receives JSON POST)
-  webhook_url: ""
+  webhook_url: ""             # optional generic JSON webhook
 
 # Daily digest: summary notification/email
 digest:
   enabled: false
-  # ntfy.sh topic (can be same or different from alerts)
   ntfy_topic: ""
-  # SMTP settings for email digest (all required for email delivery)
   smtp_host: ""
   smtp_port: 587
   smtp_user: ""

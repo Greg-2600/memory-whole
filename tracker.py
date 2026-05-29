@@ -173,21 +173,21 @@ def _cluster_headlines(
         docs.append(text)
 
     vec = TfidfVectorizer(max_features=2000, stop_words="english")
-    X = vec.fit_transform(docs)
+    features = vec.fit_transform(docs)
 
     # Optional SVD for dimensionality reduction
-    n_comp = min(100, max(1, X.shape[1] - 1), max(1, X.shape[0] - 1))
+    n_comp = min(100, max(1, features.shape[1] - 1), max(1, features.shape[0] - 1))
     if n_comp > 1:
         try:
             svd = TruncatedSVD(n_components=n_comp)
-            Xr = svd.fit_transform(X)
-        except Exception:
-            Xr = X.toarray()
+            reduced_features = svd.fit_transform(features)
+        except (RuntimeError, TypeError, ValueError):
+            reduced_features = features.toarray()
     else:
-        Xr = X.toarray()
+        reduced_features = features.toarray()
 
     scanner = DBSCAN(eps=0.45, min_samples=2, metric="cosine")
-    labels = scanner.fit_predict(Xr)
+    labels = scanner.fit_predict(reduced_features)
 
     buckets: dict[int, list[Any]] = {}
     noise: list[list[Any]] = []

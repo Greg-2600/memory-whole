@@ -16,6 +16,7 @@ import sqlite3
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 log = logging.getLogger(__name__)
@@ -83,8 +84,6 @@ def find_new_disappearances(
 
 def mark_alerted(conn: sqlite3.Connection, story_ids: list[int]) -> None:
     """Record that these stories have been alerted so we don't re-send."""
-    from datetime import datetime, timezone
-
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     for sid in story_ids:
         conn.execute(
@@ -110,9 +109,15 @@ def send_ntfy(topic: str, title: str, body: str, priority: str = "default") -> b
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(
+            req, timeout=10
+        ) as resp:  # nosec B310 – URL always ntfy.sh, operator config only
             return resp.status == 200
-    except Exception as exc:
+    except (urllib.error.URLError, OSError) as exc:
+        log.warning("ntfy send failed: %s", exc)
+        return False
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        # Preserve resilience for unexpected transport/library errors.
         log.warning("ntfy send failed: %s", exc)
         return False
 
@@ -128,9 +133,14 @@ def send_webhook(webhook_url: str, payload: dict[str, Any]) -> bool:
         headers={"Content-Type": "application/json"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(
+            req, timeout=10
+        ) as resp:  # nosec B310 – webhook_url from operator config, never user input
             return 200 <= resp.status < 300
-    except Exception as exc:
+    except (urllib.error.URLError, OSError) as exc:
+        log.warning("webhook send failed: %s", exc)
+        return False
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         log.warning("webhook send failed: %s", exc)
         return False
 

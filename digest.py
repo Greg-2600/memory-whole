@@ -20,6 +20,7 @@ import logging
 import smtplib
 import sqlite3
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import db
@@ -146,8 +147,6 @@ def run_digest(
 
     # Always write to file
     if output_dir:
-        from pathlib import Path
-
         out = Path(output_dir) / f"digest-{today}.txt"
         out.write_text(text, encoding="utf-8")
         log.info("Digest written to %s", out)

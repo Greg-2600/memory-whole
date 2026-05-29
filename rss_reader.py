@@ -15,6 +15,8 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import html
+import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -40,13 +42,20 @@ from utils import (
 
 # Optional heavy deps for legacy clustering path
 try:
-    from sklearn.cluster import DBSCAN
-    from sklearn.decomposition import TruncatedSVD
-    from sklearn.feature_extraction.text import TfidfVectorizer
-except Exception:  # pragma: no cover - optional import
-    TfidfVectorizer = None  # type: ignore
-    TruncatedSVD = None  # type: ignore
-    DBSCAN = None  # type: ignore
+    from sklearn.cluster import DBSCAN as _dbscan_cls
+    from sklearn.decomposition import TruncatedSVD as _truncated_svd_cls
+    from sklearn.feature_extraction.text import TfidfVectorizer as _tfidf_vectorizer_cls
+except ImportError:  # pragma: no cover - optional import
+    _tfidf_vectorizer_cls = None
+    _truncated_svd_cls = None
+    _dbscan_cls = None
+
+# Backward-compatible exports used by legacy tests/callers.
+# pylint: disable=invalid-name
+TfidfVectorizer = _tfidf_vectorizer_cls
+TruncatedSVD = _truncated_svd_cls
+DBSCAN = _dbscan_cls
+# pylint: enable=invalid-name
 
 
 def parse_args() -> argparse.Namespace:
@@ -316,12 +325,10 @@ def detect_important_clusters(
     cluster similar documents. Returned cluster dicts contain a
     representative title, score, start/end dates and member items.
     """
-    import math
-
     if not entries:
         return []
 
-    if TfidfVectorizer is None or DBSCAN is None:
+    if _tfidf_vectorizer_cls is None or _dbscan_cls is None:
         raise RuntimeError(
             "scikit-learn is required for detect-important (install scikit-learn, numpy)"
         )
@@ -355,28 +362,32 @@ def detect_important_clusters(
     if not any(d.strip() for d in docs):
         return []
 
-    vec = TfidfVectorizer(max_features=2000, stop_words="english")
-    X = vec.fit_transform(docs)
+    vec = _tfidf_vectorizer_cls(max_features=2000, stop_words="english")
+    features = vec.fit_transform(docs)
 
     # Dimensionality reduction if practical to help clustering
-    Xr = X
+    reduced_features = features
     try:
-        if TruncatedSVD is not None:
-            n_components = min(100, max(1, X.shape[1] - 1), max(1, X.shape[0] - 1))
+        if _truncated_svd_cls is not None:
+            n_components = min(
+                100,
+                max(1, features.shape[1] - 1),
+                max(1, features.shape[0] - 1),
+            )
             if n_components > 1:
-                svd = TruncatedSVD(n_components=n_components)
-                Xr = svd.fit_transform(X)
+                svd = _truncated_svd_cls(n_components=n_components)
+                reduced_features = svd.fit_transform(features)
             else:
-                Xr = X.toarray()
+                reduced_features = features.toarray()
         else:
-            Xr = X.toarray()
-    except Exception:
-        Xr = X.toarray()
+            reduced_features = features.toarray()
+    except (RuntimeError, TypeError, ValueError):
+        reduced_features = features.toarray()
 
     # DBSCAN with cosine metric groups near-duplicate story texts
     # Slightly tighter eps to reduce over-clustering of loosely-related items
-    db = DBSCAN(eps=0.45, min_samples=min_cluster_size, metric="cosine")
-    labels = db.fit_predict(Xr)
+    dbscan_model = _dbscan_cls(eps=0.45, min_samples=min_cluster_size, metric="cosine")
+    labels = dbscan_model.fit_predict(reduced_features)
 
     clusters: dict[int, list[int]] = {}
     for i, lbl in enumerate(labels):
@@ -480,7 +491,7 @@ def detect_important_clusters(
     return results
 
 
-def write_calendar_html(
+def write_calendar_html(  # pylint: disable=too-many-nested-blocks
     clusters: list[dict[str, Any]],
     output_dir: Path,
     title: str = "News Calendar",
@@ -735,7 +746,7 @@ def write_calendar_html(
                     for sname in srcs[:2]:
                         try:
                             ico = favicon_for_source(str(sname))
-                        except Exception:
+                        except (TypeError, ValueError):
                             ico = ""
                         if ico:
                             icons_html += f"<img src='{html.escape(ico)}' alt='{html.escape(str(sname))}'>"
@@ -766,8 +777,6 @@ def write_calendar_html(
 
     html_lines.append("</table>")
     # Embed cluster metadata and add interactive controls (search, filters, sort, view)
-    import json
-
     clusters_json = json.dumps(clusters, default=str)
     html_lines.append(f"<script>window.CLUSTERS = {clusters_json};</script>")
     html_lines.append(
@@ -952,8 +961,6 @@ def write_review_ui(clusters: list[dict[str, Any]], output_dir: Path) -> None:
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     # Prepare JSON data
-    import json
-
     review_data = []
     for c in clusters:
         review_data.append(
@@ -1057,7 +1064,7 @@ def load_entries_from_markdown(output_dir: Path) -> list[dict[str, Any]]:
                             0,
                             0,
                         )
-                    except Exception:
+                    except ValueError:
                         published = None
                     continue
                 m = re.match(r"- Source:\s*(.+)", ln)
@@ -1127,7 +1134,7 @@ def main() -> None:  # pylint: disable=too-many-locals
         args, "from_markdown", False
     ):
         # Legacy calendar generation from markdown — run old path
-        _legacy_detect_from_markdown(config, settings, output_dir, args)
+        _legacy_detect_from_markdown(settings, output_dir, args)
         return
 
     # ------------------------------------------------------------------
@@ -1211,9 +1218,7 @@ def main() -> None:  # pylint: disable=too-many-locals
     feed_health = []
     if not getattr(args, "fetch_only", False):
         # Validate feeds before fetching
-        from fetcher import validate_feeds
-
-        validation = validate_feeds(config)
+        validation = fetcher.validate_feeds(config)
         errors = [v for v in validation if not v.ok]
         warnings = [v for v in validation if v.warnings]
         if errors:
@@ -1268,7 +1273,7 @@ def main() -> None:  # pylint: disable=too-many-locals
         print(f"Dashboard written to: {output_dir / 'index.html'}")
 
         # Write JSON export alongside dashboard
-        _write_json_export(conn, output_dir, config)
+        _write_json_export(conn, output_dir)
 
         # Disappearance alerts
         alert_count = alerts.run_alerts(conn, config)
@@ -1284,10 +1289,11 @@ def main() -> None:  # pylint: disable=too-many-locals
     conn.close()
 
 
-def _write_json_export(conn: Any, output_dir: Path, config: dict[str, Any]) -> None:
+def _write_json_export(
+    conn: Any, output_dir: Path, config: dict[str, Any] | None = None
+) -> None:
     """Write JSON files for external consumption (API-like export)."""
-    import json
-
+    del config  # compatibility arg retained for legacy callers/tests
     today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     top = db_mod.get_top_stories(conn, limit=50)
@@ -1337,7 +1343,6 @@ def _write_json_export(conn: Any, output_dir: Path, config: dict[str, Any]) -> N
 
 
 def _legacy_detect_from_markdown(
-    config: dict[str, Any],
     settings: dict[str, Any],
     output_dir: Path,
     args: argparse.Namespace,

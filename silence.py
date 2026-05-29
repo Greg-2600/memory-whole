@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 import db
 from utils import LEFT_LEANS, RIGHT_LEANS, lean_for_source
@@ -40,8 +41,6 @@ def detect_silence(
     Returns a list of SilenceGap objects sorted by importance.
     """
     if reference_date is None:
-        from datetime import datetime, timezone
-
         reference_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     # Get stories with recent activity

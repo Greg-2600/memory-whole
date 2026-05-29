@@ -201,7 +201,10 @@ def fetch_all_feeds(
                 items_this_feed += 1
 
             fh.items_fetched = items_this_feed
-        except Exception as exc:  # noqa: BLE001
+        except (AttributeError, OSError, TypeError, ValueError) as exc:
+            fh.error = str(exc)[:200]
+            log.warning("Feed %s fetch failed: %s", name, fh.error)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             fh.error = str(exc)[:200]
             log.warning("Feed %s fetch failed: %s", name, fh.error)
         finally:

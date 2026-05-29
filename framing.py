@@ -57,18 +57,17 @@ def analyze_framing(
     Returns:
         List of FramingDivergence, sorted by divergence descending.
     """
-    date_clause = f"date('{reference_date}')" if reference_date else "date('now')"
-
     # Get stories with enough coverage in the lookback window
     stories = conn.execute(
-        f"""SELECT s.id, s.representative_title, s.importance_score,
-                   (SELECT COUNT(DISTINCT h.source)
-                    FROM headlines h WHERE h.story_id = s.id) AS source_count
-            FROM stories s
-            WHERE source_count >= ?
-              AND s.last_seen >= date({date_clause}, ?)
-            ORDER BY s.importance_score DESC""",
-        (min_sources, f"-{lookback_days} days"),
+        """SELECT s.id, s.representative_title, s.importance_score,
+                  (SELECT COUNT(DISTINCT h.source)
+                   FROM headlines h
+                   WHERE h.story_id = s.id) AS source_count
+           FROM stories s
+           WHERE source_count >= ?
+             AND s.last_seen >= date(COALESCE(?, 'now'), ?)
+           ORDER BY s.importance_score DESC""",
+        (min_sources, reference_date, f"-{lookback_days} days"),
     ).fetchall()
 
     results: list[FramingDivergence] = []

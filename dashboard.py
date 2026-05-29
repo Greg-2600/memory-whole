@@ -77,7 +77,9 @@ def generate(
     all_sources = sorted(source_matrix.keys())
 
     # Top stories for matrix (limit to top 20)
-    matrix_stories = sorted(all_stories, key=lambda s: s["importance_score"], reverse=True)[:20]
+    matrix_stories = sorted(
+        all_stories, key=lambda s: s["importance_score"], reverse=True
+    )[:20]
 
     # Preload per-story source names for top stories (used by hero/grid cards)
     story_sources: dict[int, list[str]] = {}
@@ -503,7 +505,7 @@ def _compact_row(story: sqlite3.Row, rank: int, velocity: str = "") -> str:
 def _status_badge(status: str) -> str:
     if status == "active":
         return '<span class="status-pill active">ACTIVE</span>'
-    elif status == "fading":
+    if status == "fading":
         return '<span class="status-pill fading">FADING</span>'
     return '<span class="status-pill gone">GONE</span>'
 
@@ -526,13 +528,13 @@ def _velocity_badge(velocity: str) -> str:
         return (
             '<span class="vel-badge rising" title="Trending up">&#9650; rising</span>'
         )
-    elif velocity == "cooling":
+    if velocity == "cooling":
         return (
             '<span class="vel-badge cooling" title="Cooling off">&#9660; cooling</span>'
         )
-    elif velocity == "falling":
+    if velocity == "falling":
         return '<span class="vel-badge falling" title="Disappearing">&#9660; falling</span>'
-    elif velocity == "new":
+    if velocity == "new":
         return '<span class="vel-badge new" title="New story">&#9733; new</span>'
     return ""
 

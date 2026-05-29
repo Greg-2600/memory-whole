@@ -281,6 +281,8 @@ The digest is always written to `output/digest-YYYY-MM-DD.txt` regardless of del
 
 The named volume `mw_output` persists the SQLite database and all generated data across container rebuilds.
 
+The Compose service also pins public DNS resolvers (`1.1.1.1` and `8.8.8.8`) during builds and runtime. That avoids intermittent feed lookup and package resolution failures on hosts with unreliable default Docker DNS.
+
 ### Force regeneration
 
 ```bash
@@ -371,11 +373,23 @@ python -m pip install -r requirements-dev.txt
 # Format
 python -m black .
 
-# Lint
+# Lint + static analysis
 python -m ruff check .
+python -m pylint $(find . -name '*.py' -not -path './.venv/*' -not -path './tests/*')
+python -m bandit -r . --exclude ./.venv,./tests -ll
 
 # Test (124 tests)
 python -m pytest tests/ -v
+```
+
+For a full pre-push verification pass:
+
+```bash
+python -m black --check .
+python -m ruff check .
+python -m pylint $(find . -name '*.py' -not -path './.venv/*' -not -path './tests/*')
+python -m bandit -r . --exclude ./.venv,./tests -ll
+python -m pytest -q
 ```
 
 ## Requirements

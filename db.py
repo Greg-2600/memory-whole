@@ -108,13 +108,17 @@ def upsert_headline(
 
 def get_recent_headlines(conn: sqlite3.Connection, days: int = 14) -> list[sqlite3.Row]:
     """Headlines seen within the last *days* days."""
+    anchor_row = conn.execute(
+        "SELECT MAX(last_seen) AS anchor FROM headlines"
+    ).fetchone()
+    anchor = anchor_row["anchor"] if anchor_row and anchor_row["anchor"] else "now"
     return conn.execute(
         """SELECT id, url, title, source, published_at,
                   first_seen, last_seen, summary, story_id
            FROM headlines
-           WHERE last_seen >= date('now', ? || ' days')
+           WHERE last_seen >= date(?, ? || ' days')
            ORDER BY last_seen DESC""",
-        (f"-{days}",),
+        (anchor, f"-{days}"),
     ).fetchall()
 
 
@@ -186,13 +190,16 @@ def merge_stories(conn: sqlite3.Connection, story_ids: list[int]) -> int:
     keep = min(story_ids)
     others = [s for s in story_ids if s != keep]
     if others:
-        ph = ",".join("?" * len(others))
-        conn.execute(
-            f"UPDATE headlines SET story_id = ? WHERE story_id IN ({ph})",
-            [keep, *others],
-        )
-        conn.execute(f"DELETE FROM daily_snapshots WHERE story_id IN ({ph})", others)
-        conn.execute(f"DELETE FROM stories WHERE id IN ({ph})", others)
+        for sid in others:
+            conn.execute(
+                "UPDATE headlines SET story_id = ? WHERE story_id = ?",
+                (keep, sid),
+            )
+            conn.execute(
+                "DELETE FROM daily_snapshots WHERE story_id = ?",
+                (sid,),
+            )
+            conn.execute("DELETE FROM stories WHERE id = ?", (sid,))
     return keep
 
 
@@ -337,7 +344,7 @@ def backfill_daily_snapshots(conn: sqlite3.Connection) -> int:
         if updates:
             sets = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(
-                f"UPDATE stories SET {sets} WHERE id = ?",
+                f"UPDATE stories SET {sets} WHERE id = ?",  # nosec B608 – sets is built from internal column-name keys only
                 (*updates.values(), s["id"]),
             )
 

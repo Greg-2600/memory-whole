@@ -62,3 +62,24 @@ pythonpath = ["."]
 [tool.isort]
 profile = "black"
 line_length = 88
+
+[tool.pylint.main]
+ignore = ["output", ".venv", "venv", "build", "dist"]
+
+[tool.pylint.messages_control]
+# Suppress architectural noise we're not restructuring right now
+disable = [
+  "C0301",  # line-too-long  (ruff/black own line length)
+  "C0302",  # too-many-lines
+  "C0116",  # missing-function-docstring
+  "R0902",  # too-many-instance-attributes
+  "R0912",  # too-many-branches
+  "R0913",  # too-many-arguments
+  "R0914",  # too-many-local-variables
+  "R0915",  # too-many-statements
+  "R0917",  # too-many-positional-arguments
+  "R1716",  # chained-comparison (style preference)
+]
+
+[tool.pylint.format]
+max-line-length = 120

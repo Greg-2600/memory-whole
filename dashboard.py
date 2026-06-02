@@ -646,12 +646,12 @@ def _render_page(
 
 <div class="controls">
   <input type="text" id="search" placeholder="Search stories\u2026">
-  <label><input type="checkbox" id="multiOnly"> Multi-source only</label>
+    <label><input type="checkbox" id="multiOnly" checked> Multi-source only</label>
 </div>
 
 <section id="tab-top" class="tab-content active">
   <h2>Top Stories</h2>
-  <p class="section-desc">Ranked by importance: cross-source coverage \u00d7 persistence \u00d7 velocity.</p>
+    <p class="section-desc">Ranked by importance, with multi-source stories shown first.</p>
   {top_section}
 </section>
 
@@ -1535,6 +1535,7 @@ def _main_js() -> str:
   }
   search.addEventListener('input',applyFilters);
   multiOnly.addEventListener('change',applyFilters);
+    applyFilters();
 
   // Heatmap sort
   document.querySelectorAll('.hm-sort').forEach(function(btn){

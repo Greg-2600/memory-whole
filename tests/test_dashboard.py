@@ -187,6 +187,20 @@ class TestDashboardGenerate(unittest.TestCase):
 
         conn.close()
 
+    def test_dashboard_defaults_to_multi_source_filter(self) -> None:
+        conn = _make_conn()
+        _seed_data(conn)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outdir = Path(tmpdir)
+            dashboard.generate(conn, outdir)
+
+            content = (outdir / "index.html").read_text(encoding="utf-8")
+            self.assertIn('id="multiOnly" checked', content)
+            self.assertIn('applyFilters();', content)
+
+        conn.close()
+
     def test_dashboard_accepts_feed_health(self) -> None:
         from fetcher import FeedHealth
 

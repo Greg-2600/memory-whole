@@ -31,6 +31,7 @@ import db as db_mod
 import digest
 import fetcher
 import tracker
+from clustering import cluster_entries as _cluster_entries
 from utils import (
     DEFAULT_USER_AGENT,
     favicon_for_source,
@@ -362,41 +363,10 @@ def detect_important_clusters(
     if not any(d.strip() for d in docs):
         return []
 
-    vec = _tfidf_vectorizer_cls(max_features=2000, stop_words="english")
-    features = vec.fit_transform(docs)
-
-    # Dimensionality reduction if practical to help clustering
-    reduced_features = features
-    try:
-        if _truncated_svd_cls is not None:
-            n_components = min(
-                100,
-                max(1, features.shape[1] - 1),
-                max(1, features.shape[0] - 1),
-            )
-            if n_components > 1:
-                svd = _truncated_svd_cls(n_components=n_components)
-                reduced_features = svd.fit_transform(features)
-            else:
-                reduced_features = features.toarray()
-        else:
-            reduced_features = features.toarray()
-    except (RuntimeError, TypeError, ValueError):
-        reduced_features = features.toarray()
-
-    # DBSCAN with cosine metric groups near-duplicate story texts
-    # Slightly tighter eps to reduce over-clustering of loosely-related items
-    dbscan_model = _dbscan_cls(eps=0.45, min_samples=min_cluster_size, metric="cosine")
-    labels = dbscan_model.fit_predict(reduced_features)
-
-    clusters: dict[int, list[int]] = {}
-    for i, lbl in enumerate(labels):
-        if lbl == -1:
-            continue
-        clusters.setdefault(int(lbl), []).append(i)
+    groups = _cluster_entries(entries, min_cluster_size=min_cluster_size)
 
     results: list[dict[str, Any]] = []
-    for lbl, idxs in clusters.items():
+    for lbl, idxs in enumerate(groups):
         sources = set()
         mentions = len(idxs)
         dates = [meta[i]["date"] for i in idxs if meta[i]["date"] is not None]
@@ -452,38 +422,6 @@ def detect_important_clusters(
                 "mentions": mentions,
                 "sources": list(sources),
                 "items": items,
-            }
-        )
-
-    results.sort(key=lambda r: r["score"], reverse=True)
-    # Include singleton (noise) items as their own low-scored clusters so
-    # the calendar can show all stories, not only multi-source clusters.
-    noise_idxs = [i for i, lbl in enumerate(labels) if lbl == -1]
-    for i in noise_idxs:
-        sources = {meta[i]["feed"]}
-        mentions = 1
-        start = meta[i]["date"]
-        end = meta[i]["date"]
-        score = 0.5 * (1.0 + math.log1p(mentions))
-        rep_title = meta[i].get("title") or "Report"
-        item = {
-            "title": meta[i].get("title"),
-            "link": meta[i].get("link"),
-            "feed": meta[i].get("feed"),
-            "date": meta[i].get("date").isoformat() if meta[i].get("date") else None,
-        }
-        results.append(
-            {
-                "label": f"noise-{i}",
-                "score": score,
-                "persistence_days": 1,
-                "velocity": 1.0,
-                "start": start,
-                "end": end,
-                "rep_title": rep_title,
-                "mentions": mentions,
-                "sources": list(sources),
-                "items": [item],
             }
         )
 

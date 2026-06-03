@@ -17,16 +17,23 @@ from typing import Any
 import db
 from utils import slugify
 
-log = logging.getLogger(__name__)
-
 try:
-    from sklearn.cluster import DBSCAN
-    from sklearn.decomposition import TruncatedSVD
-    from sklearn.feature_extraction.text import TfidfVectorizer
+    from clustering import cluster_headlines as _hybrid_cluster_headlines
 
     _HAS_SKLEARN = True
 except ImportError:
-    _HAS_SKLEARN = False
+    _hybrid_cluster_headlines = None
+
+    try:
+        from sklearn.cluster import DBSCAN
+        from sklearn.decomposition import TruncatedSVD
+        from sklearn.feature_extraction.text import TfidfVectorizer
+
+        _HAS_SKLEARN = True
+    except ImportError:
+        _HAS_SKLEARN = False
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -161,6 +168,10 @@ def _cluster_headlines(
     Noise items (singletons) are each returned as their own 1-element cluster
     so every headline ends up in a story.
     """
+    if _hybrid_cluster_headlines is not None:
+        groups = _hybrid_cluster_headlines(headlines, min_cluster_size=2)
+        return [[headlines[i] for i in group] for group in groups]
+
     if not _HAS_SKLEARN:
         raise RuntimeError(
             "scikit-learn is required for story tracking "

@@ -133,7 +133,7 @@ cp feeds.example.yaml feeds.yaml   # edit to customize sources
 ./scripts/docker_up.sh
 ```
 
-Open **http://localhost:4747** — that's it. The container fetches feeds, clusters stories, builds the dashboard, and serves it. On first run, Memory Whole automatically backpopulates all available historical data from feed archives so you start with days of context instead of a blank slate. A cron job inside the container re-runs the pipeline every 6 hours.
+Open **http://localhost:4747** — that's it. The container fetches feeds, clusters stories, builds the dashboard, and serves it. On first run, Memory Whole automatically backpopulates all available historical data from feed archives so you start with days of context instead of a blank slate. A cron job inside the container re-runs the pipeline every 2 hours.
 
 ### Local
 
@@ -349,7 +349,7 @@ memory_whole/
 │   ├── docker_up.sh        # Start via Compose
 │   ├── docker_down.sh      # Stop via Compose
 │   ├── docker_entrypoint.sh
-│   ├── container_cron      # Cron schedule (every 6 hours)
+│   ├── container_cron      # Cron schedule (every 2 hours)
 │   ├── run.sh              # Helper for common operations
 │   └── ...
 ├── tests/                  # 124 tests (pytest)

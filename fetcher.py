@@ -119,7 +119,7 @@ class FeedHealth:
 def fetch_all_feeds(
     conn: Any,
     config: dict[str, Any],
-    max_items: int = 250,
+    max_items: int | None = None,
 ) -> tuple[int, list[FeedHealth]]:
     """Fetch every configured feed and upsert headlines into the DB.
 

@@ -67,7 +67,7 @@ settings:
   # output directory for generated markdown and artifacts
   output_dir: output
 
-  # how many items to fetch per feed by default (can be overridden with --max-items)
+  # how many items to fetch per feed by default (omit, set to 0, or leave unset for no limit; can be overridden with --max-items)
   max_items_per_feed: 250
 
   # whether to merge all sources into a single daily digest

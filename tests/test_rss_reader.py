@@ -79,7 +79,7 @@ feeds:
             settings = config["settings"]
 
             self.assertEqual(settings["output_dir"], "output")
-            self.assertEqual(settings["max_items_per_feed"], 25)
+            self.assertIsNone(settings["max_items_per_feed"])
             self.assertTrue(settings["merge_all_sources"])
             self.assertEqual(settings["merged_filename"], "daily-news-{date}.md")
             self.assertEqual(settings["daily_title"], "Daily RSS Digest - {date}")

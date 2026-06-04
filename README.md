@@ -139,7 +139,7 @@ Open **http://localhost:4747** — that's it. The container fetches feeds, clust
 
 ```bash
 python -m pip install -r requirements.txt
-python rss_reader.py --max-items 250     # fetch + cluster + dashboard
+python rss_reader.py     # fetch + cluster + dashboard (no default item cap)
 python -m http.server 4747 --directory output
 ```
 
@@ -208,6 +208,7 @@ feeds:
 
 settings:
   output_dir: output
+  # how many items to fetch per feed by default (omit, set to 0, or leave unset for no limit; can be overridden with --max-items)
   max_items_per_feed: 250
   merge_all_sources: true
   merged_filename: "daily-news-{date}.md"

@@ -166,7 +166,7 @@ def load_config(path: Path) -> dict[str, Any]:
 
     data.setdefault("settings", {})
     data["settings"].setdefault("output_dir", "output")
-    data["settings"].setdefault("max_items_per_feed", 25)
+    data["settings"].setdefault("max_items_per_feed", None)
     data["settings"].setdefault("merge_all_sources", True)
     data["settings"].setdefault("merged_filename", "daily-news-{date}.md")
     data["settings"].setdefault("daily_title", "Daily RSS Digest - {date}")
@@ -1036,11 +1036,16 @@ def main() -> None:  # pylint: disable=too-many-locals
     settings = config["settings"]
     output_dir = Path(args.output_dir or settings["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
-    max_items = (
+    raw_max_items = (
         args.max_items
         if args.max_items is not None
-        else int(settings["max_items_per_feed"])
+        else settings.get("max_items_per_feed")
     )
+    max_items = None
+    if raw_max_items is not None:
+        max_items = int(raw_max_items)
+        if max_items <= 0:
+            max_items = None
 
     db_path = output_dir / "memory_whole.db"
 

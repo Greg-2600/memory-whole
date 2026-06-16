@@ -227,7 +227,8 @@ def refresh_story(conn: sqlite3.Connection, story_id: int) -> None:
     days_active = max(1, _date_diff(last, first) + 1)
     velocity = mentions / days_active
     base = source_count * (1.0 + math.log1p(mentions))
-    persistence = 1.0 + days_active / 7.0
+    capped_days = min(days_active, 14)
+    persistence = 1.0 + capped_days / 7.0
     vel_factor = 1.0 + min(3.0, velocity) / 3.0
     score = base * persistence * vel_factor
 

@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
+import sys
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from functools import lru_cache
@@ -54,13 +56,25 @@ except ImportError:  # pragma: no cover - optional dependency
     _hdbscan = None
     _HAS_HDBSCAN = False
 
-try:
-    import faiss
+def _safe_import_faiss() -> tuple[Any | None, bool]:
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", "import faiss"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if completed.returncode == 0:
+            import faiss
 
-    _HAS_FAISS = True
-except ImportError:  # pragma: no cover - optional dependency
-    faiss = None
-    _HAS_FAISS = False
+            return faiss, True
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    return None, False
+
+
+faiss, _HAS_FAISS = _safe_import_faiss()
 
 
 @dataclass(frozen=True)

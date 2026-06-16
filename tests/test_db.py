@@ -329,6 +329,72 @@ class TestStories(unittest.TestCase):
         self.assertGreater(row["importance_score"], 0)
         conn.close()
 
+    def test_refresh_story_caps_persistence_boost(self) -> None:
+        conn = _make_conn()
+        recent_sid = db.create_story(
+            conn,
+            slug="recent",
+            title="Recent Story",
+            first_seen="2026-06-15",
+            last_seen="2026-06-15",
+        )
+        old_sid = db.create_story(
+            conn,
+            slug="old",
+            title="Old Story",
+            first_seen="2025-01-01",
+            last_seen="2026-06-15",
+        )
+
+        for i in range(5):
+            db.upsert_headline(
+                conn,
+                url=f"http://example.com/recent-{i}",
+                title=f"Recent headline {i}",
+                source=f"S{i}",
+                published_at="2026-06-15",
+                first_seen="2026-06-15",
+                last_seen="2026-06-15",
+            )
+        for i, hid in enumerate(
+            [r["id"] for r in conn.execute("SELECT id FROM headlines ORDER BY url").fetchall()][:5]
+        ):
+            db.assign_headline_to_story(conn, hid, recent_sid)
+
+        for i in range(5):
+            db.upsert_headline(
+                conn,
+                url=f"http://example.com/old-{i}",
+                title=f"Old headline {i}",
+                source=f"T{i}",
+                published_at="2026-06-15",
+                first_seen="2026-06-15",
+                last_seen="2026-06-15",
+            )
+        for hid in [r["id"] for r in conn.execute("SELECT id FROM headlines WHERE url LIKE 'http://example.com/old-%' ORDER BY url").fetchall()]:
+            db.assign_headline_to_story(conn, hid, old_sid)
+
+        conn.commit()
+
+        db.refresh_story(conn, recent_sid)
+        db.refresh_story(conn, old_sid)
+        conn.commit()
+
+        recent_score = conn.execute(
+            "SELECT importance_score FROM stories WHERE id = ?",
+            (recent_sid,),
+        ).fetchone()["importance_score"]
+        old_score = conn.execute(
+            "SELECT importance_score FROM stories WHERE id = ?",
+            (old_sid,),
+        ).fetchone()["importance_score"]
+
+        self.assertGreater(recent_score, 0)
+        self.assertGreater(old_score, 0)
+        self.assertLess(old_score / recent_score, 5)
+
+        conn.close()
+
 
 class TestQueryHelpers(unittest.TestCase):
     """Tests for query functions."""

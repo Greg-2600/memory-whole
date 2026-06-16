@@ -220,17 +220,41 @@ def refresh_story(conn: sqlite3.Connection, story_id: int) -> None:
     # Use published_at as canonical last_seen so old stories don't appear
     # active just because they were re-fetched today.
     last = max(r["published_at"] or r["last_seen"] for r in rows)
-    rep_title = max(rows, key=lambda r: len(r["title"]))["title"]
+    rep_title = max(
+        rows,
+        key=lambda r: (
+            r["last_seen"] or "",
+            len(r["title"] or ""),
+        ),
+    )["title"]
     mentions = len(rows)
     source_count = len(sources)
 
     days_active = max(1, _date_diff(last, first) + 1)
     velocity = mentions / days_active
-    base = source_count * (1.0 + math.log1p(mentions))
     capped_days = min(days_active, 14)
     persistence = 1.0 + capped_days / 7.0
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    recent_row = conn.execute(
+        """SELECT COUNT(DISTINCT source) AS recent_source_count,
+                          COUNT(*) AS recent_mentions
+                   FROM headlines
+                  WHERE story_id = ?
+                    AND last_seen >= date(?, ? || ' days')""",
+        (story_id, today, "-7"),
+    ).fetchone()
+    recent_source_count = int(recent_row["recent_source_count"] or 0)
+    recent_mentions = int(recent_row["recent_mentions"] or 0)
+
+    effective_source_count = max(recent_source_count, 1) + 0.1 * source_count
+    effective_mentions = recent_mentions + 0.05 * mentions
+    base = effective_source_count * (1.0 + math.log1p(effective_mentions))
+
+    freshness = min(1.0, recent_mentions / max(1, mentions))
+    recency_factor = 0.5 + 0.5 * freshness
     vel_factor = 1.0 + min(3.0, velocity) / 3.0
-    score = base * persistence * vel_factor
+    score = base * persistence * recency_factor * vel_factor
 
     conn.execute(
         """UPDATE stories SET

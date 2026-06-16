@@ -12,10 +12,10 @@ allowing semantic matching when better text models are installed.
 
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import os
 import re
-import subprocess
-import sys
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from functools import lru_cache
@@ -56,22 +56,17 @@ except ImportError:  # pragma: no cover - optional dependency
     _hdbscan = None
     _HAS_HDBSCAN = False
 
+
 def _safe_import_faiss() -> tuple[Any | None, bool]:
+    spec = importlib.util.find_spec("faiss")
+    if spec is None:
+        return None, False
+
     try:
-        completed = subprocess.run(
-            [sys.executable, "-c", "import faiss"],
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
-        if completed.returncode == 0:
-            import faiss
-
-            return faiss, True
-    except (OSError, subprocess.SubprocessError):
-        pass
-
-    return None, False
+        faiss_module = importlib.import_module("faiss")
+        return faiss_module, True
+    except ImportError:
+        return None, False
 
 
 faiss, _HAS_FAISS = _safe_import_faiss()
@@ -84,8 +79,9 @@ class ClusterSettings:
     min_cluster_size: int = 2
     lexical_threshold: float = 92.0
     semantic_threshold_embeddings: float = 0.78
-    semantic_threshold_tfidf: float = 0.45
-    neighbor_k: int = 8
+    semantic_threshold_tfidf: float = 0.55
+    semantic_lexical_threshold: float = 30.0
+    neighbor_k: int = 6
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
 
@@ -105,11 +101,10 @@ def cluster_headlines(
     settings: ClusterSettings | None = None,
 ) -> list[list[int]]:
     """Cluster SQLite headline rows by similarity and return index groups."""
-    records = [
-        _record_from_headline(row)
-        for row in headlines
-    ]
-    return _cluster_records(records, min_cluster_size=min_cluster_size, settings=settings)
+    records = [_record_from_headline(row) for row in headlines]
+    return _cluster_records(
+        records, min_cluster_size=min_cluster_size, settings=settings
+    )
 
 
 def cluster_entries(
@@ -119,7 +114,9 @@ def cluster_entries(
 ) -> list[list[int]]:
     """Cluster feed entry dictionaries and return index groups."""
     records = [_record_from_entry(entry) for entry in entries]
-    return _cluster_records(records, min_cluster_size=min_cluster_size, settings=settings)
+    return _cluster_records(
+        records, min_cluster_size=min_cluster_size, settings=settings
+    )
 
 
 def _record_from_headline(row: Mapping[str, Any]) -> _ClusterRecord:
@@ -220,7 +217,9 @@ def _vectorize_texts(
         dense_embeddings = normalize(dense_embeddings, norm="l2")
         return dense_embeddings, "embeddings"
 
-    vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2), stop_words="english")
+    vectorizer = TfidfVectorizer(
+        max_features=5000, ngram_range=(1, 2), stop_words="english"
+    )
     sparse = vectorizer.fit_transform(texts)
 
     if sparse.shape[0] < 2 or sparse.shape[1] < 2:
@@ -304,7 +303,10 @@ def _candidate_components(
 
     for left, right, score in _nearest_neighbor_pairs(vectors, settings.neighbor_k):
         lexical = _lexical_similarity(records[left].title, records[right].title)
-        if score >= semantic_threshold or lexical >= settings.lexical_threshold:
+        if (
+            score >= semantic_threshold
+            and lexical >= settings.semantic_lexical_threshold
+        ) or lexical >= settings.lexical_threshold:
             union_find.union(left, right)
 
     grouped: dict[int, list[int]] = {}
@@ -350,7 +352,9 @@ def _split_component(
     return [list(component)]
 
 
-def _labels_to_groups(component: Sequence[int], labels: Sequence[int]) -> list[list[int]]:
+def _labels_to_groups(
+    component: Sequence[int], labels: Sequence[int]
+) -> list[list[int]]:
     clusters: dict[int, list[int]] = {}
     noise: list[list[int]] = []
 

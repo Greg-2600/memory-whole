@@ -357,7 +357,12 @@ class TestStories(unittest.TestCase):
                 last_seen="2026-06-15",
             )
         for i, hid in enumerate(
-            [r["id"] for r in conn.execute("SELECT id FROM headlines ORDER BY url").fetchall()][:5]
+            [
+                r["id"]
+                for r in conn.execute(
+                    "SELECT id FROM headlines ORDER BY url"
+                ).fetchall()
+            ][:5]
         ):
             db.assign_headline_to_story(conn, hid, recent_sid)
 
@@ -371,7 +376,12 @@ class TestStories(unittest.TestCase):
                 first_seen="2026-06-15",
                 last_seen="2026-06-15",
             )
-        for hid in [r["id"] for r in conn.execute("SELECT id FROM headlines WHERE url LIKE 'http://example.com/old-%' ORDER BY url").fetchall()]:
+        for hid in [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM headlines WHERE url LIKE 'http://example.com/old-%' ORDER BY url"
+            ).fetchall()
+        ]:
             db.assign_headline_to_story(conn, hid, old_sid)
 
         conn.commit()
@@ -393,6 +403,90 @@ class TestStories(unittest.TestCase):
         self.assertGreater(old_score, 0)
         self.assertLess(old_score / recent_score, 5)
 
+        conn.close()
+
+    def test_refresh_story_prefers_recent_activity(self) -> None:
+        conn = _make_conn()
+        old_sid = db.create_story(
+            conn,
+            slug="old-story",
+            title="Old Story",
+            first_seen="2025-01-01",
+            last_seen="2026-06-15",
+        )
+        new_sid = db.create_story(
+            conn,
+            slug="new-story",
+            title="New Story",
+            first_seen="2026-06-10",
+            last_seen="2026-06-15",
+        )
+
+        for i in range(10):
+            db.upsert_headline(
+                conn,
+                url=f"http://example.com/old-{i}",
+                title=f"Old headline {i}",
+                source=f"S{i}",
+                published_at="2025-01-01",
+                first_seen="2025-01-01",
+                last_seen="2025-01-01",
+            )
+        for i in range(1):
+            db.upsert_headline(
+                conn,
+                url=f"http://example.com/old-recent-{i}",
+                title=f"Old recent headline {i}",
+                source="S0",
+                published_at="2026-06-15",
+                first_seen="2026-06-15",
+                last_seen="2026-06-15",
+            )
+
+        for i in range(11):
+            db.upsert_headline(
+                conn,
+                url=f"http://example.com/new-{i}",
+                title=f"New headline {i}",
+                source=f"T{i}",
+                published_at="2026-06-15",
+                first_seen="2026-06-15",
+                last_seen="2026-06-15",
+            )
+
+        old_hids = [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM headlines WHERE url LIKE 'http://example.com/old-%' ORDER BY url"
+            ).fetchall()
+        ]
+        new_hids = [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM headlines WHERE url LIKE 'http://example.com/new-%' ORDER BY url"
+            ).fetchall()
+        ]
+        for hid in old_hids:
+            db.assign_headline_to_story(conn, hid, old_sid)
+        for hid in new_hids:
+            db.assign_headline_to_story(conn, hid, new_sid)
+
+        conn.commit()
+
+        db.refresh_story(conn, old_sid)
+        db.refresh_story(conn, new_sid)
+        conn.commit()
+
+        old_score = conn.execute(
+            "SELECT importance_score FROM stories WHERE id = ?",
+            (old_sid,),
+        ).fetchone()["importance_score"]
+        new_score = conn.execute(
+            "SELECT importance_score FROM stories WHERE id = ?",
+            (new_sid,),
+        ).fetchone()["importance_score"]
+
+        self.assertGreater(new_score, old_score)
         conn.close()
 
 

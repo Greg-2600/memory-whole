@@ -1,5 +1,6 @@
 """Unit tests for the db module."""
 
+import datetime as dt
 import sqlite3
 import unittest
 
@@ -406,20 +407,27 @@ class TestStories(unittest.TestCase):
         conn.close()
 
     def test_refresh_story_prefers_recent_activity(self) -> None:
+        # Dates are relative to today: refresh_story() scores recency
+        # against the wall clock, so hardcoded dates go stale and the
+        # long-lived story wins on persistence alone.
+        today = dt.date.today()
+        old_day = (today - dt.timedelta(days=200)).isoformat()
+        new_day = (today - dt.timedelta(days=5)).isoformat()
+        today_iso = today.isoformat()
         conn = _make_conn()
         old_sid = db.create_story(
             conn,
             slug="old-story",
             title="Old Story",
-            first_seen="2025-01-01",
-            last_seen="2026-06-15",
+            first_seen=old_day,
+            last_seen=today_iso,
         )
         new_sid = db.create_story(
             conn,
             slug="new-story",
             title="New Story",
-            first_seen="2026-06-10",
-            last_seen="2026-06-15",
+            first_seen=new_day,
+            last_seen=today_iso,
         )
 
         for i in range(10):
@@ -428,9 +436,9 @@ class TestStories(unittest.TestCase):
                 url=f"http://example.com/old-{i}",
                 title=f"Old headline {i}",
                 source=f"S{i}",
-                published_at="2025-01-01",
-                first_seen="2025-01-01",
-                last_seen="2025-01-01",
+                published_at=old_day,
+                first_seen=old_day,
+                last_seen=old_day,
             )
         for i in range(1):
             db.upsert_headline(
@@ -438,9 +446,9 @@ class TestStories(unittest.TestCase):
                 url=f"http://example.com/old-recent-{i}",
                 title=f"Old recent headline {i}",
                 source="S0",
-                published_at="2026-06-15",
-                first_seen="2026-06-15",
-                last_seen="2026-06-15",
+                published_at=today_iso,
+                first_seen=today_iso,
+                last_seen=today_iso,
             )
 
         for i in range(11):
@@ -449,9 +457,9 @@ class TestStories(unittest.TestCase):
                 url=f"http://example.com/new-{i}",
                 title=f"New headline {i}",
                 source=f"T{i}",
-                published_at="2026-06-15",
-                first_seen="2026-06-15",
-                last_seen="2026-06-15",
+                published_at=today_iso,
+                first_seen=today_iso,
+                last_seen=today_iso,
             )
 
         old_hids = [

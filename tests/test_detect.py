@@ -1,5 +1,7 @@
+import os
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from rss_reader import TfidfVectorizer, detect_important_clusters, write_calendar_html
 
@@ -34,7 +36,15 @@ class TestDetectImportant(unittest.TestCase):
             },
         ]
 
-        clusters = detect_important_clusters(items, min_cluster_size=2)
+        # Force the TF-IDF path: embedding cosine scores for short
+        # headline+snippet texts sit below the embeddings threshold and
+        # depend on which model weights are cached locally, so the real
+        # vectorizer choice is environment-dependent. This test covers
+        # grouping/scoring/calendar output, not embedding quality
+        # (union logic itself is covered with mocked vectors in
+        # test_clustering.py).
+        with mock.patch.dict(os.environ, {"MW_CLUSTER_MODEL": ""}):
+            clusters = detect_important_clusters(items, min_cluster_size=2)
         self.assertTrue(isinstance(clusters, list))
         self.assertTrue(len(clusters) >= 1)
         # Expect a cluster with mentions >=2 and multiple sources

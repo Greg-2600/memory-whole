@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/docker-ready-2496ed?logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   <img src="https://img.shields.io/badge/feeds-27%20sources-orange" alt="Feeds">
-  <img src="https://img.shields.io/badge/tests-136%20passing-brightgreen?logo=pytest&logoColor=white" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-139%20passing-brightgreen?logo=pytest&logoColor=white" alt="Tests">
 </p>
 
 ---
@@ -355,7 +355,7 @@ memory_whole/
 │   ├── container_cron      # Cron schedule (every 2 hours)
 │   ├── run.sh              # Helper for common operations
 │   └── ...
-├── tests/                  # 136 tests (pytest)
+├── tests/                  # 139 tests (pytest)
 │   ├── test_db.py
 │   ├── test_fetcher.py
 │   ├── test_tracker.py
@@ -381,7 +381,7 @@ python -m ruff check .
 python -m pylint $(find . -name '*.py' -not -path './.venv/*' -not -path './tests/*')
 python -m bandit -r . --exclude ./.venv,./tests -ll
 
-# Test (136 tests)
+# Test (139 tests)
 python -m pytest tests/ -v
 ```
 

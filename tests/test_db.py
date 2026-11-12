@@ -550,5 +550,51 @@ class TestQueryHelpers(unittest.TestCase):
         conn.close()
 
 
+class TestArtifactSourceFiltering(unittest.TestCase):
+    """Legacy digest-import rows must not pose as real outlets."""
+
+    def _seed(self, conn) -> int:
+        sid = db.create_story(
+            conn, slug="s", title="Story", first_seen="2026-11-01", last_seen="2026-11-12"
+        )
+        for i, source in enumerate(
+            ["Real Outlet", "Daily RSS Digest - 2026-05-29", "Unknown"]
+        ):
+            db.upsert_headline(
+                conn,
+                url=f"http://example.com/{i}",
+                title=f"Headline {i}",
+                source=source,
+                published_at="2026-11-12",
+                first_seen="2026-11-12",
+                last_seen="2026-11-12",
+            )
+            hid = conn.execute(
+                "SELECT id FROM headlines WHERE url = ?", (f"http://example.com/{i}",)
+            ).fetchone()["id"]
+            db.assign_headline_to_story(conn, hid, sid)
+        conn.commit()
+        return sid
+
+    def test_matrix_excludes_digest_sources(self) -> None:
+        conn = _make_conn()
+        self._seed(conn)
+        sources = {
+            r["source"] for r in db.get_source_story_matrix(conn, days=365)
+        }
+        self.assertIn("Real Outlet", sources)
+        self.assertNotIn("Daily RSS Digest - 2026-05-29", sources)
+        conn.close()
+
+    def test_source_names_exclude_digest_sources(self) -> None:
+        conn = _make_conn()
+        sid = self._seed(conn)
+        names = db.get_story_source_names(conn, sid)
+        self.assertIn("Real Outlet", names)
+        self.assertIn("Unknown", names)
+        self.assertFalse(any(n.startswith("Daily RSS Digest") for n in names))
+        conn.close()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -104,6 +104,22 @@ class TestSendNtfy:
     def test_failure_returns_false(self, mock_urlopen):
         assert send_ntfy("topic", "Title", "Body") is False
 
+    @patch("alerts.urllib.request.urlopen")
+    def test_non_ascii_title_does_not_raise(self, mock_urlopen):
+        """Smart quotes/dashes in titles must not break header encoding."""
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        title = "\u2018Who will be held accountable?\u2019 — fatal \u2014 update\u2026"
+        assert send_ntfy("topic", title, "Body with \u2019 quote") is True
+        sent_req = mock_urlopen.call_args[0][0]
+        sent_title = sent_req.get_header("Title")
+        sent_title.encode("latin-1")  # must not raise
+        assert "Who will be held accountable?" in sent_title
+
 
 class TestSendWebhook:
     @patch("alerts.urllib.request.urlopen")

@@ -14,6 +14,7 @@ services:
     environment:
       - PORT=4747
       - FORCE_REGEN=0
+      - HF_TOKEN=${HF_TOKEN:-}   # optional: raises Hugging Face Hub rate limits
 
 volumes:
   mw_output:

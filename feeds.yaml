@@ -143,15 +143,15 @@ silence:
 
 # Alerts: push notifications for disappearing stories
 alerts:
-  enabled: false
-  ntfy_topic: ""              # free push via https://ntfy.sh (e.g., "my-memory-whole")
+  enabled: true
+  ntfy_topic: "mw-alerts-26951b89"   # free push via https://ntfy.sh (subscribe in the ntfy app/web)
   min_peak_sources: 3
   webhook_url: ""             # optional generic JSON webhook
 
 # Daily digest: summary notification/email
 digest:
-  enabled: false
-  ntfy_topic: ""
+  enabled: true
+  ntfy_topic: "mw-digest-b678dce8"
   smtp_host: ""
   smtp_port: 587
   smtp_user: ""

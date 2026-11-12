@@ -93,6 +93,28 @@ def mark_alerted(conn: sqlite3.Connection, story_ids: list[int]) -> None:
     conn.commit()
 
 
+def _sanitize_header(value: str) -> str:
+    """Fold a header value into latin-1 (HTTP headers can't carry UTF-8).
+
+    urllib encodes header values as latin-1, so smart quotes, em dashes
+    and the like raise UnicodeEncodeError at send time. Map the common
+    offenders to ASCII and replace the rest with '?'.
+    """
+    replacements = {
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2026": "...",
+        "\u00a0": " ",
+    }
+    for src, dst in replacements.items():
+        value = value.replace(src, dst)
+    return value.encode("latin-1", errors="replace").decode("latin-1")
+
+
 def send_ntfy(topic: str, title: str, body: str, priority: str = "default") -> bool:
     """Send a push notification via ntfy.sh. Returns True on success."""
     if not topic:
@@ -103,7 +125,7 @@ def send_ntfy(topic: str, title: str, body: str, priority: str = "default") -> b
         url,
         data=data,
         headers={
-            "Title": title,
+            "Title": _sanitize_header(title),
             "Priority": priority,
             "Tags": "newspaper,warning",
         },

@@ -59,6 +59,12 @@ CREATE INDEX IF NOT EXISTS idx_snap_date   ON daily_snapshots(date);
 # Connection helpers
 # ------------------------------------------------------------------
 
+# Headline rows imported from legacy daily-digest markdown files carry the
+# digest title (e.g. "Daily RSS Digest - 2026-05-29") as their source instead
+# of the real outlet. They are real headlines, but the attribution is bogus,
+# so source-facing queries exclude them.
+ARTIFACT_SOURCE_PREFIX = "Daily RSS Digest"
+
 
 def connect(db_path: str | Path) -> sqlite3.Connection:
     """Open a connection with WAL mode and foreign keys."""
@@ -461,9 +467,10 @@ def get_source_story_matrix(
            FROM headlines h
            JOIN stories s ON h.story_id = s.id
            WHERE h.last_seen >= date('now', ? || ' days')
+             AND h.source NOT LIKE ? || '%'
            GROUP BY h.source, s.id
            ORDER BY s.importance_score DESC""",
-        (f"-{days}",),
+        (f"-{days}", ARTIFACT_SOURCE_PREFIX),
     ).fetchall()
 
 
@@ -480,8 +487,8 @@ def story_count(conn: sqlite3.Connection) -> int:
 def get_story_source_names(conn: sqlite3.Connection, story_id: int) -> list[str]:
     """Return distinct source names for a story, ordered alphabetically."""
     rows = conn.execute(
-        "SELECT DISTINCT source FROM headlines WHERE story_id = ? ORDER BY source",
-        (story_id,),
+        "SELECT DISTINCT source FROM headlines WHERE story_id = ? AND source NOT LIKE ? || '%' ORDER BY source",
+        (story_id, ARTIFACT_SOURCE_PREFIX),
     ).fetchall()
     return [r["source"] for r in rows]
 

@@ -1097,6 +1097,10 @@ def main() -> None:  # pylint: disable=too-many-locals
                 continue
             title = first_non_empty(e.get("title"), "Untitled")
             source = first_non_empty(e.get("_feed_name"), "Unknown")
+            if source.startswith(db_mod.ARTIFACT_SOURCE_PREFIX):
+                # Legacy digest files sometimes carry the digest title as
+                # the item source — bogus attribution, don't import it.
+                source = "Unknown"
             pub_dt = item_datetime(e)
             published_at = pub_dt.strftime("%Y-%m-%d") if pub_dt else None
             first_seen = published_at or today

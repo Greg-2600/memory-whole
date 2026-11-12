@@ -13,6 +13,14 @@ RUN apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 update \
  && rm -rf /var/lib/apt/lists/* \
  && pip install --no-cache-dir -r requirements.txt
 
+# Pre-download the embedding model so pipeline runs hit the warm local
+# cache instead of the Hugging Face Hub (avoids unauthenticated rate
+# limits and the per-run re-download delay).
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+# The Hub revision check on every run emits an "unauthenticated requests"
+# warning even with a warm cache; errors still surface at this level.
+ENV HF_HUB_VERBOSITY=error
+
 # Copy project files
 COPY . /app
 

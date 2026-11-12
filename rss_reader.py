@@ -1185,6 +1185,12 @@ def main() -> None:  # pylint: disable=too-many-locals
             print(f"  {len(failed)}/{len(feed_health)} feeds failed:")
             for fh in failed:
                 print(f"    ✗ {fh.name}: {fh.error}")
+        staled = [(fh.name, fh.stale_items) for fh in feed_health if fh.stale_items]
+        if staled:
+            total_stale = sum(n for _, n in staled)
+            print(f"  {total_stale} stale item(s) quarantined:")
+            for feed_name, n in staled:
+                print(f"    ⊘ {feed_name}: {n} item(s) older than max_item_age_days")
 
         if first_run:
             print("First run detected — backpopulating historical data...")

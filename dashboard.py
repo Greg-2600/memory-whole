@@ -1088,6 +1088,7 @@ def _render_feed_health(health: list) -> str:
     fail_ct = len(health) - ok_ct
     avg_ms = int(sum(fh.fetch_time_ms for fh in health) / max(1, len(health)))
     total_items = sum(fh.items_fetched for fh in health)
+    total_stale = sum(getattr(fh, "stale_items", 0) for fh in health)
 
     lines = [
         '<div class="health-summary">',
@@ -1095,9 +1096,12 @@ def _render_feed_health(health: list) -> str:
         f'<span class="health-stat fail">{fail_ct} Failed</span>' if fail_ct else "",
         f'<span class="health-stat">{total_items} items</span>',
         f'<span class="health-stat">avg {avg_ms}ms</span>',
+        f'<span class="health-stat fail">{total_stale} stale quarantined</span>'
+        if total_stale
+        else "",
         "</div>",
         '<table class="health-tbl"><thead><tr>',
-        "<th>Status</th><th>Feed</th><th>Items</th><th>Time</th><th>Error</th>",
+        "<th>Status</th><th>Feed</th><th>Items</th><th>Stale</th><th>Time</th><th>Error</th>",
         "</tr></thead><tbody>",
     ]
 
@@ -1106,11 +1110,13 @@ def _render_feed_health(health: list) -> str:
         cls = "ok" if fh.ok else "fail"
         err = html_mod.escape(fh.error[:80]) if fh.error else ""
         name_esc = html_mod.escape(fh.name)
+        stale = getattr(fh, "stale_items", 0)
         lines.append(
             f'<tr class="health-{cls}">'
             f'<td class="health-icon {cls}">{icon}</td>'
             f"<td>{name_esc}</td>"
             f"<td>{fh.items_fetched}</td>"
+            f"<td>{stale}</td>"
             f"<td>{fh.fetch_time_ms}ms</td>"
             f"<td>{err}</td></tr>"
         )

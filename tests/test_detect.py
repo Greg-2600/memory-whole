@@ -57,6 +57,28 @@ class TestDetectImportant(unittest.TestCase):
         write_calendar_html(clusters, outdir, title="Test Calendar")
         self.assertTrue((outdir / "calendar.html").exists())
 
+    def test_detect_groups_near_duplicates_without_embedding_model(self):
+        """Near-duplicate titles group on the TF-IDF path (see above)."""
+        items = [
+            {
+                "title": "Big Fire in Downtown, crews respond",
+                "summary": "A large fire broke out in downtown area.",
+                "link": "http://a.example/1",
+                "_feed_name": "Feed A",
+                "published_parsed": (2026, 2, 18, 12, 0, 0, 0, 0, 0),
+            },
+            {
+                "title": "Big fire in downtown, crews respond, evacuations ordered",
+                "summary": "Fire spreads through two blocks, evacuations underway.",
+                "link": "http://b.example/2",
+                "_feed_name": "Feed B",
+                "published_parsed": (2026, 2, 18, 13, 0, 0, 0, 0, 0),
+            },
+        ]
+        with mock.patch.dict(os.environ, {"MW_CLUSTER_MODEL": ""}):
+            clusters = detect_important_clusters(items, min_cluster_size=2)
+        self.assertTrue(any(c.get("mentions", 0) >= 2 for c in clusters))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,8 +12,8 @@
   <img src="https://img.shields.io/badge/python-3.10%2B-3776ab?logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/docker-ready-2496ed?logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/feeds-36%20sources-orange" alt="Feeds">
-  <img src="https://img.shields.io/badge/tests-124%20passing-brightgreen?logo=pytest&logoColor=white" alt="Tests">
+  <img src="https://img.shields.io/badge/feeds-27%20sources-orange" alt="Feeds">
+  <img src="https://img.shields.io/badge/tests-136%20passing-brightgreen?logo=pytest&logoColor=white" alt="Tests">
 </p>
 
 ---
@@ -22,11 +22,11 @@
   <img src="docs/dashboard-preview.png" alt="Memory Whole dashboard" width="800">
 </p>
 
-Memory Whole is a self-hosted news intelligence tool. It fetches headlines from **36 sources** across the political spectrum, clusters them into stories using machine learning, and tracks how those stories rise, persist, and vanish from the news cycle. It detects **silence gaps** — stories one side of the media covers but the other ignores — and can alert you when significant stories disappear. Everything is served as a single-page dashboard you can run with one command.
+Memory Whole is a self-hosted news intelligence tool. It fetches headlines from **27 sources** across the political spectrum, clusters them into stories using machine learning, and tracks how those stories rise, persist, and vanish from the news cycle. It detects **silence gaps** — stories one side of the media covers but the other ignores — and can alert you when significant stories disappear. Everything is served as a single-page dashboard you can run with one command.
 
 ## Why?
 
-Every news outlet decides what to amplify and what to bury. Memory Whole doesn't editorialize — it **remembers**. It watches 36 RSS feeds spanning left, center, and right, then answers questions like:
+Every news outlet decides what to amplify and what to bury. Memory Whole doesn't editorialize — it **remembers**. It watches 27 RSS feeds spanning left, center, and right, then answers questions like:
 
 - Which stories are **every** outlet covering right now?
 - What was huge yesterday but **disappeared** today?
@@ -37,7 +37,7 @@ Every news outlet decides what to amplify and what to bury. Memory Whole doesn't
 ## How It Works
 
 ```
-   RSS Feeds (36 sources, classified by political lean)
+   RSS Feeds (27 sources, classified by political lean)
          │
          ▼
    ┌───────────┐     ┌──────────┐     ┌──────────────┐
@@ -111,16 +111,18 @@ Each story has a detail page with a full sparkline chart, every headline that ma
 
 ### Feeds
 
-36 sources across the political spectrum:
+27 sources across the political spectrum:
 
 | Lean | Sources |
 |---|---|
-| **Left** | MSNBC, HuffPost, Mother Jones, The Intercept, Democracy Now |
-| **Center-Left** | CNN, PBS NewsHour, NPR, NY Times, Washington Post, Vox, The Guardian US |
-| **Center** | ABC News, CBS News, AP News, Reuters, The Hill, Politico, USA Today, CNBC, Google News |
-| **Center-Right** | Wall Street Journal, NY Post, Washington Examiner, RealClearPolitics |
-| **Right** | FOX News, National Review, Breitbart, Daily Wire, The Federalist, Drudge Report, Rantingly, Patriots.win |
+| **Left** | HuffPost, The Intercept, Mother Jones, Democracy Now |
+| **Center-Left** | ABC News, NPR, PBS NewsHour, NBC News, NY Times, Washington Post, Guardian US |
+| **Center** | AP News, Reuters, CBS News, Axios, The Hill, CNBC |
+| **Center-Right** | Wall Street Journal, NY Post |
+| **Right** | FOX News, Breitbart, National Review, Daily Wire, The Federalist |
 | **International** | BBC, Al Jazeera, France 24 |
+
+> Feeds known to be dead or stale (CNN's `edition.rss` serves 2023 content, Politico picks, USA Today, Washington Examiner, RealClearPolitics) are intentionally omitted. Items dated older than `max_item_age_days` (default 90) are quarantined rather than stored as fresh news.
 
 ## Quick Start
 
@@ -339,7 +341,7 @@ memory_whole/
 ├── alerts.py               # Disappearance alerts (ntfy, webhooks)
 ├── digest.py               # Daily digest (ntfy, email, file)
 ├── utils.py                # Shared helpers (colors, leans, slugify)
-├── feeds.yaml              # Feed configuration (36 sources)
+├── feeds.yaml              # Feed configuration (27 sources)
 ├── feeds.example.yaml      # Example config for new users
 ├── Dockerfile              # Container image
 ├── docker-compose.yml      # One-command deployment
@@ -353,7 +355,7 @@ memory_whole/
 │   ├── container_cron      # Cron schedule (every 2 hours)
 │   ├── run.sh              # Helper for common operations
 │   └── ...
-├── tests/                  # 124 tests (pytest)
+├── tests/                  # 136 tests (pytest)
 │   ├── test_db.py
 │   ├── test_fetcher.py
 │   ├── test_tracker.py
@@ -379,7 +381,7 @@ python -m ruff check .
 python -m pylint $(find . -name '*.py' -not -path './.venv/*' -not -path './tests/*')
 python -m bandit -r . --exclude ./.venv,./tests -ll
 
-# Test (124 tests)
+# Test (136 tests)
 python -m pytest tests/ -v
 ```
 

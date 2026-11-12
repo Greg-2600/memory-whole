@@ -58,6 +58,13 @@ except ImportError:  # pragma: no cover - optional dependency
 
 
 def _safe_import_faiss() -> tuple[Any | None, bool]:
+    # faiss-cpu wheels are built with AVX2 instructions; on older CPUs
+    # (e.g. Xeon E5-2690, which has AVX but no AVX2) `import faiss` dies
+    # with SIGILL ("Illegal instruction") which cannot be caught.
+    # Only attempt the import when explicitly opted in via MW_USE_FAISS=1.
+    # The sklearn NearestNeighbors fallback is used otherwise.
+    if os.getenv("MW_USE_FAISS", "").strip().lower() not in ("1", "true", "yes"):
+        return None, False
     spec = importlib.util.find_spec("faiss")
     if spec is None:
         return None, False

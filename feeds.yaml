@@ -1,7 +1,11 @@
-# Example feeds.yaml for Memory Whole
+# feeds.yaml for Memory Whole
 #
 # Each feed needs: name, url, lean
 # Lean values: left | center-left | center | center-right | right | international
+#
+# All URLs verified live as of 2026-11-12. Feeds known to be dead or stale
+# (CNN edition.rss serves 2023 content, Politico picks, USA Today,
+# Washington Examiner feed, RealClearPolitics) are intentionally omitted.
 
 feeds:
   # ── Wire services ─────────────────────────────────────────
@@ -22,6 +26,15 @@ feeds:
   - name: NPR News
     url: https://feeds.npr.org/1001/rss.xml
     lean: center-left
+  - name: PBS NewsHour
+    url: https://www.pbs.org/newshour/feeds/rss/headlines
+    lean: center-left
+  - name: CBS News
+    url: https://www.cbsnews.com/latest/rss/main
+    lean: center
+  - name: NBC News
+    url: https://feeds.nbcnews.com/nbcnews/public/news
+    lean: center-left
 
   # ── Major papers ──────────────────────────────────────────
   - name: NY Times
@@ -33,13 +46,19 @@ feeds:
   - name: Washington Post
     url: https://feeds.washingtonpost.com/rss/national
     lean: center-left
+  - name: Guardian US
+    url: https://www.theguardian.com/us-news/rss
+    lean: center-left
 
-  # ── Center / Political ────────────────────────────────────
+  # ── Center / Business / Political ─────────────────────────
   - name: Axios
     url: https://api.axios.com/feed/
     lean: center
   - name: The Hill
     url: https://thehill.com/feed/
+    lean: center
+  - name: CNBC
+    url: https://www.cnbc.com/id/100003114/device/rss/rss.html
     lean: center
 
   # ── Right-leaning ─────────────────────────────────────────
@@ -49,18 +68,39 @@ feeds:
   - name: National Review
     url: https://www.nationalreview.com/feed/
     lean: right
+  - name: NY Post
+    url: https://nypost.com/feed/
+    lean: center-right
+  - name: Daily Wire
+    url: https://www.dailywire.com/feeds/rss.xml
+    lean: right
+  - name: The Federalist
+    url: https://thefederalist.com/feed/
+    lean: right
 
   # ── Left-leaning ──────────────────────────────────────────
   - name: HuffPost
-    url: https://www.huffpost.com/section/front-page/feed
+    url: https://www.huffpost.com/section/us-news/feed
     lean: left
   - name: The Intercept
     url: https://theintercept.com/feed/?rss
+    lean: left
+  - name: Mother Jones
+    url: https://www.motherjones.com/feed/
+    lean: left
+  - name: Democracy Now
+    url: https://www.democracynow.org/democracynow.rss
     lean: left
 
   # ── International ─────────────────────────────────────────
   - name: BBC (US & Canada)
     url: https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml
+    lean: international
+  - name: Al Jazeera
+    url: https://www.aljazeera.com/xml/rss/all.xml
+    lean: international
+  - name: France 24 English
+    url: https://www.france24.com/en/rss
     lean: international
 
 settings:
@@ -69,6 +109,15 @@ settings:
 
   # how many items to fetch per feed by default (can be overridden with --max-items)
   max_items_per_feed: 250
+
+  # retry transient fetch failures (total attempts per feed)
+  fetch_max_attempts: 3
+
+  # linear backoff between attempts: base_seconds * attempt_number
+  fetch_backoff_seconds: 1.0
+
+  # items with a publish date older than this (days) are quarantined, not stored
+  max_item_age_days: 90
 
   # whether to merge all sources into a single daily digest
   merge_all_sources: true

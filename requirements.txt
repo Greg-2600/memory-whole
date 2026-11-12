@@ -6,4 +6,3 @@ numpy>=1.26.0
 rapidfuzz>=3.14.0
 sentence-transformers>=5.5.1
 hdbscan>=0.8.44
-faiss-cpu>=1.14.2

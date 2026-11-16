@@ -1,5 +1,5 @@
 # Minimal Dockerfile to serve the generated `output/` directory on port 4747
-FROM python:3.11-slim
+FROM python:3.15-slim
 
 # Set working dir
 WORKDIR /app
